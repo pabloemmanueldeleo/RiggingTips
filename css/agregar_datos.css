@@ -1,0 +1,24 @@
+/* agregar_datos.css */
+
+.formulario {
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  }
+  
+  .container {
+    background-color: #fff;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Apilar verticalmente los campos de entrada */
+  .formulario label,
+  .formulario textarea,
+  .formulario input {
+    display: block;
+    margin-bottom: 15px;
+    width: 100%;
+  }
+  

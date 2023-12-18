@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agregar Datos a JSON</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/agregar_datos.css"> <!-- Nuevo archivo CSS -->
+</head>
+<body>
+
+  <div class="container">
+    <h1>Agregar Datos a JSON</h1>
+
+    <form id="formularioDatos" class="formulario">
+      <label for="nombre">Nombre:</label>
+      <input type="text" id="nombre" name="nombre" required>
+
+      <label for="descripcion">Descripción:</label>
+      <textarea id="descripcion" name="descripcion" required></textarea>
+
+      <label for="rigging">Ejemplo para Rigging:</label>
+      <textarea id="rigging" name="rigging" required></textarea>
+
+      <label for="organicos">Ejemplo para Objetos Orgánicos:</label>
+      <textarea id="organicos" name="organicos" required></textarea>
+
+      <label for="inorganicos">Ejemplo para Objetos Inorgánicos:</label>
+      <textarea id="inorganicos" name="inorganicos" required></textarea>
+
+      <button type="button" onclick="agregarDatos()">Agregar Datos</button>
+    </form>
+
+    <a href="index.html" class="volver-link">Volver a la Página Principal</a>
+  </div>
+
+  <script src="js/agregar_datos.js"></script>
+</body>
+</html>

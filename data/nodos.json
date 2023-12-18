@@ -1,0 +1,88 @@
+{
+  "nodos": [
+    {
+      "nombre": "aimMatrix",
+      "descripcion": "Orienta un objeto hacia un objetivo específico en el espacio 3D.",
+      "rigging": "Apuntar la mano de un personaje hacia un objeto.",
+      "organicos": "Apuntar la dirección de una antena hacia una señal.",
+      "inorganicos": "Alinear un cañón de un vehículo hacia un objetivo."
+    },
+    {
+      "nombre": "blendMatrix",
+      "descripcion": "Combina dos o más matrices para transiciones suaves entre configuraciones.",
+      "rigging": "Suavizar la transición entre posturas de un personaje.",
+      "organicos": "Fusionar matrices de transformación en animación.",
+      "inorganicos": "Mezclar transformaciones entre dos poses."
+    },
+    {
+      "nombre": "spaceMatrix",
+      "descripcion": "Transforma una matriz de espacio local a espacio mundial o viceversa.",
+      "rigging": "Cambiar el marco de referencia de un control de articulación.",
+      "organicos": "Ajustar la posición de un control en un sistema anidado.",
+      "inorganicos": "Cambiar el espacio de un objeto respecto a otro."
+    },
+    {
+      "nombre": "multiplyPointByMatrix",
+      "descripcion": "Transforma la posición de un punto en el espacio 3D según una matriz de transformación.",
+      "rigging": "Posicionar un control de mano en relación con una articulación.",
+      "organicos": "Mover un punto de referencia en una escultura digital.",
+      "inorganicos": "Alinear un objeto con respecto a otro."
+    },
+    {
+      "nombre": "rotationFromMatrix",
+      "descripcion": "Extrae la rotación de una matriz de transformación.",
+      "rigging": "Orientar huesos basados en la matriz de transformación.",
+      "organicos": "Obtener la orientación de una escultura en 3D.",
+      "inorganicos": "Determinar la orientación de un objeto."
+    },
+    {
+      "nombre": "crossProduct",
+      "descripcion": "Calcula el producto cruz entre dos vectores.",
+      "rigging": "Determinar un eje lateral útil en el control de orientación.",
+      "organicos": "Crear un vector perpendicular en modelado 3D.",
+      "inorganicos": "Calcular un vector perpendicular a otros dos."
+    },
+    {
+      "nombre": "multiply",
+      "descripcion": "Multiplica dos valores.",
+      "rigging": "Ajustar escalas en una animación.",
+      "organicos": "Modelar crecimiento proporcional.",
+      "inorganicos": "Ajustar el tamaño proporcional de un objeto."
+    },
+    {
+      "nombre": "subtract",
+      "descripcion": "Resta dos valores.",
+      "rigging": "Ajustar diferencias en una animación.",
+      "organicos": "Modelar contracciones en formas orgánicas.",
+      "inorganicos": "Ajustar diferencias en tamaños de objetos."
+    },
+    {
+      "nombre": "translationFromMatrix",
+      "descripcion": "Extrae la translación de una matriz de transformación.",
+      "rigging": "Posicionar un objeto en un lugar específico en el espacio.",
+      "organicos": "Mover un componente de una escultura digital.",
+      "inorganicos": "Ajustar la posición de un objeto en una escena."
+    },
+    {
+      "nombre": "dotProduct",
+      "descripcion": "Calcula el producto punto entre dos vectores.",
+      "rigging": "Evaluar la alineación de dos huesos en una articulación.",
+      "organicos": "Determinar la dirección común de dos elementos en 3D.",
+      "inorganicos": "Calcular la alineación de dos objetos."
+    },
+    {
+      "nombre": "scaleFromMatrix",
+      "descripcion": "Extrae la escala de una matriz de transformación.",
+      "rigging": "Ajustar el tamaño de un objeto en una animación.",
+      "organicos": "Escalonar un componente de una escultura digital.",
+      "inorganicos": "Ajustar la escala de un objeto en una escena."
+    },
+    {
+      "nombre": "absolute",
+      "descripcion": "Devuelve el valor absoluto de un número.",
+      "rigging": "Controlar magnitudes sin influencia de la dirección.",
+      "organicos": "Ajustar magnitudes en geometría orgánica.",
+      "inorganicos": "Establecer magnitudes en tamaños de objetos."
+    }
+  ]
+}
