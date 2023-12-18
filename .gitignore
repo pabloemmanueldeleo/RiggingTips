@@ -1,0 +1,12 @@
+# Files and directories to ignore
+
+```
+.DS_Store
+Thumbs.db
+# Dependence directories
+/node_modules
+/venv
+/.venv
+# visual studio code
+.vscode
+```
