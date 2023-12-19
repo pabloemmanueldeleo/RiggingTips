@@ -1,15 +1,24 @@
 <html lang="es">
-<!--  First, include the Firebase SDK -->
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Nodos de Maya para Rigging</title>
+  <title>Rigging Tips</title>
   <link rel="stylesheet" href="css/style.css">
-  
+
+  <!-- Script de Firebase -->
+<!-- Incluye las bibliotecas de Firebase antes de tu script -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <!-- Configuración de Firebase -->
+  <script src="js/config.js"></script>
+  <!-- Tu archivo principal -->
+<script src="js/script.js"></script>
+<script src="js/agregar_datos.js"></script>
+
 </head>
 <body>
-<!-- Enlace para ir a la página de agregar datos -->
-<a href="agregar_datos.html">Agregar Datos</a>
+  <!-- Enlace para ir a la página de agregar datos -->
+  <a href="agregar_datos.html">Agregar Datos</a>
 
   <div class="tabla-container">
     <table class="nodos-table">
@@ -27,12 +36,6 @@
       </tbody>
     </table>
   </div>
-    <!-- Contenido de tu página -->
-      <script src="js/script.js"></script>
-    <!-- Agrega esto a tu HTML -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database.js"></script>
-
-  </body>
-  </html>
-  
+   
+</body>
+</html>

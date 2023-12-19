@@ -1,4 +1,9 @@
-const jsonPath = 'data/nodos.json';
+// Asegúrate de que firebase ha sido inicializado antes de esta línea
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+var db = firebase.firestore();
+var nodosRef = db.collection("nodos");
+
 function agregarDatos() {
   const nombre = document.getElementById('nombre').value;
   const descripcion = document.getElementById('descripcion').value;
@@ -14,31 +19,32 @@ function agregarDatos() {
     inorganicos: inorganicos
   };
 
-  // Simular solicitud GET para cargar datos desde el archivo local
-  fetch(jsonPath)
-    .then(response => response.json())
-    .then(data => {
-      if (data && Array.isArray(data.nodos)) {
-        // Agregar el nuevo nodo localmente
-        data.nodos.push(nuevoNodo);
+  if (verificarConfiguracionFirebase()) {
+    // Configuración de Firebase presente, intentar agregar datos a Firestore
+    agregarDatosFirestore(nuevoNodo);
+  } else {
+    // Mostrar mensaje de configuración faltante
+    mostrarMensajeConfiguracionFaltante();
+  }
+}
 
-        // Guardar datos en el archivo original local
-        const jsonData = JSON.stringify(data);
-        const blob = new Blob([jsonData], { type: 'application/json' });
-
-        // Crear un enlace temporal y hacer clic en él para descargar
-        const a = document.createElement('a');
-        a.href = window.URL.createObjectURL(blob);
-        a.download = jsonPath;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-
-        console.log('Datos agregados con éxito.');
-        // Actualiza dinámicamente la interfaz de usuario o redirige según sea necesario
-      } else {
-        console.error('La estructura del objeto data no es la esperada.');
-      }
+function agregarDatosFirestore(nuevoNodo) {
+  nodosRef.add(nuevoNodo)
+    .then(() => {
+      console.log('Datos agregados con éxito.');
+      // Actualiza dinámicamente la interfaz de usuario o redirige según sea necesario
     })
-    .catch(error => console.error('Error al cargar JSON:', error));
+    .catch(error => {
+      console.error('Error al agregar datos a Firebase:', error);
+      // Muestra mensajes de error al usuario o maneja de alguna manera
+    });
+}
+
+function verificarConfiguracionFirebase() {
+  // Verifica que firebaseConfig esté definido y tenga los campos necesarios
+  return firebaseConfig && firebaseConfig.apiKey;
+}
+
+function mostrarMensajeConfiguracionFaltante() {
+  alert('¡Advertencia!\n\nSe necesita configurar el archivo de Firebase para cargar datos en la nube. Por favor, revisa la configuración.');
 }

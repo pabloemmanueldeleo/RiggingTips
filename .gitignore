@@ -7,6 +7,10 @@ Thumbs.db
 /node_modules
 /venv
 /.venv
+# Dependence files
+.env
 # visual studio code
 .vscode
+# hide files
+/js/config.js
 ```
