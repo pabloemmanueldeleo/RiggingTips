@@ -1,6 +1,6 @@
 # RiggingTips
 
-Brief description of the project.
+The project "RiggingTips" a web page designed to showcase and save different tips for rigging in the animation industry. It utilizes a Firebase database to store the information. The project provides a template for others to create their own rigging projects and share tips with their friends in productions and studios.
 
 ## Getting Started
 
