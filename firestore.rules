@@ -1,0 +1,23 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Función para verificar si el usuario es administrador
+    function isAdmin() {
+      return request.auth != null && 
+        request.auth.token.email == 'pabloemmanueldeleo@gmail.com';
+    }
+
+    // Reglas para la colección de nodos
+    match /nodos/{document=**} {
+      allow read: if true;  // Lectura pública
+      allow write: if isAdmin();  // Solo administradores pueden escribir
+    }
+
+    // Reglas para la colección de categorías
+    match /categorias/{document=**} {
+      allow read: if true;  // Lectura pública
+      allow write: if isAdmin();  // Solo administradores pueden escribir
+    }
+  }
+} 

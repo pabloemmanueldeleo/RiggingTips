@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="no-referrer-when-downgrade">
+    <title>RiggingTips - Panel de Administración</title>
+    <link rel="stylesheet" href="css/admin.css">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+    
+    <!-- Configuración de Firebase -->
+    <script src="../js/firebase-config.js"></script>
+    
+    <!-- Módulos de la aplicación -->
+    <script type="module" src="js/modules/auth.js"></script>
+    <script type="module" src="js/modules/ui.js"></script>
+    <script type="module" src="js/modules/data.js"></script>
+    <script type="module" src="js/admin.js"></script>
+</head>
+<body>
+    <div id="errorContainer"></div>
+    
+    <div id="loginContainer" class="container">
+        <h1>RiggingTips - Panel de Administración</h1>
+        <div id="loginForm">
+            <button id="loginButton" class="btn-primary">
+                Iniciar sesión con Google
+            </button>
+        </div>
+    </div>
+
+    <div id="adminPanel" class="container hidden">
+        <header>
+            <h1>Panel de Administración</h1>
+            <button id="logoutButton" class="btn-secondary">Cerrar sesión</button>
+        </header>
+
+        <div class="admin-controls">
+            <div class="search-bar">
+                <input type="text" id="searchInput" placeholder="Buscar tips..." class="form-control">
+            </div>
+            <div id="categoriasBar" class="categorias-bar"></div>
+            <button id="newTipButton" class="btn-primary">Nuevo Tip</button>
+        </div>
+
+        <div id="tipsList" class="tips-grid"></div>
+
+        <!-- Modal para crear/editar tips -->
+        <div id="tipModal" class="modal hidden">
+            <div class="modal-content">
+                <h2 id="modalTitle">Nuevo Tip</h2>
+                <form id="tipForm">
+                    <div class="form-group">
+                        <label for="titulo">Título</label>
+                        <input type="text" id="titulo" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="descripcion">Descripción</label>
+                        <textarea id="descripcion" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="categoria">Categoría</label>
+                        <select id="categoria" required>
+                            <option value="programacion">Programación</option>
+                            <option value="bolsa">Bolsa de Trabajo</option>
+                            <option value="rigging">Rigging</option>
+                            <option value="errores">Errores</option>
+                            <option value="matematicas">Matemáticas</option>
+                            <option value="nodos">Nodos</option>
+                            <option value="pipeline">Pipeline</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="imagen">Imagen</label>
+                        <input type="file" id="imagen" accept="image/*">
+                    </div>
+                    <div class="form-group">
+                        <label for="video">Video</label>
+                        <input type="file" id="video" accept="video/*">
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="publico" checked>
+                            Público
+                        </label>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary">Guardar</button>
+                        <button type="button" class="btn-secondary" onclick="closeModal()">Cancelar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 

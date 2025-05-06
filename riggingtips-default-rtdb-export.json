@@ -1,0 +1,52 @@
+{
+  "correosAutorizados": {
+    "pabloemmanueldeleo_gmail_com": true
+  },
+  "tips": {
+    "categorias": {
+      "nodos": {
+        "descripcion": "Tips relacionados con nodos de Maya",
+        "id": "nodos",
+        "nombre": "Nodos",
+        "orden": 1
+      }
+    },
+    "contenido": {
+      "nodos": {
+        "absolute": {
+          "descripcion": "Un nodo que permite establecer posiciones absolutas en el espacio 3D.",
+          "inorganicos": "Colocación de props y elementos de escena",
+          "media": {
+            "principal": "placeholder.webp"
+          },
+          "nombre": "absolute",
+          "organicos": "Posicionamiento preciso de elementos",
+          "rigging": "absolute -mo joint1 ctrl1;",
+          "tipo": "constraint"
+        },
+        "aimmatrix": {
+          "descripcion": "Un nodo que orienta un objeto para que apunte hacia otro.",
+          "inorganicos": "Sistemas de seguimiento y cámaras",
+          "media": {
+            "principal": "placeholder.webp"
+          },
+          "nombre": "aimMatrix",
+          "organicos": "Control de mirada y orientación",
+          "rigging": "aimMatrix -mo joint1 ctrl1;",
+          "tipo": "constraint"
+        },
+        "blendmatrix": {
+          "descripcion": "Un nodo que permite mezclar múltiples matrices de transformación.",
+          "inorganicos": "Transiciones suaves entre estados",
+          "media": {
+            "principal": "placeholder.webp"
+          },
+          "nombre": "blendMatrix",
+          "organicos": "Mezcla de poses y animaciones",
+          "rigging": "blendMatrix -mo joint1 ctrl1;",
+          "tipo": "constraint"
+        }
+      }
+    }
+  }
+}

@@ -1,12 +1,44 @@
-# Files and directories to ignore
+# Dependencies
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
 
-```
+# Firebase
+.firebase/
+serviceAccountKey.json
+.firebaserc
+firebase-debug.log
+.runtimeconfig.json
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Build
+dist/
+build/
+*.log
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
 .DS_Store
 Thumbs.db
-# Dependence directories
-/node_modules
-/venv
-/.venv
-# visual studio code
-.vscode
-```
+
+# Backup
+backup/
+*.bak
+*.backup
+
+# Private/Sensitive Data
+**/private/
+**/secrets/
+**/*.key
+**/*.pem
+**/*-key.*

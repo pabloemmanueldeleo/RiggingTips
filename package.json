@@ -1,0 +1,19 @@
+{
+  "name": "riggingtips",
+  "version": "1.0.0",
+  "description": "Aplicación web para compartir tips y trucos de rigging",
+  "main": "index.js",
+  "scripts": {
+    "start": "firebase serve",
+    "deploy": "firebase deploy"
+  },
+  "dependencies": {
+    "firebase": "^10.8.0",
+    "firebase-admin": "^13.3.0"
+  },
+  "devDependencies": {
+    "firebase-tools": "^13.0.0"
+  },
+  "author": "",
+  "license": "ISC"
+}

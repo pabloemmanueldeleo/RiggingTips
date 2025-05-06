@@ -1,0 +1,32 @@
+{
+  "rules": {
+    ".read": true,
+    "nodos": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+    "correosAutorizados": {
+      ".read": "auth != null",
+      ".write": false,
+      "$email": {
+        ".validate": "newData.isBoolean()"
+      }
+    },
+    "tips": {
+      ".read": true,
+      ".write": true,
+      "categorias": {
+        ".read": true,
+        ".write": true
+      },
+      "contenido": {
+        ".read": true,
+        ".write": true,
+        "$categoria": {
+          ".read": true,
+          ".write": true
+        }
+      }
+    }
+  }
+} 

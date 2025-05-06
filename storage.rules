@@ -1,0 +1,29 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Función para verificar si el usuario es administrador
+    function isAdmin() {
+      return request.auth != null && 
+        request.auth.token.email == 'pabloemmanueldeleo@gmail.com';
+    }
+
+    // Reglas para imágenes
+    match /imagenes/{imageId} {
+      allow read;  // Cualquiera puede ver las imágenes
+      allow write: if isAdmin();  // Solo administradores pueden subir
+    }
+    
+    // Reglas para videos
+    match /videos/{videoId} {
+      allow read;  // Cualquiera puede ver los videos
+      allow write: if isAdmin();  // Solo administradores pueden subir
+    }
+    
+    // Reglas para el resto de archivos
+    match /{allPaths=**} {
+      allow read: if true;  // Lectura pública
+      allow write: if isAdmin();  // Solo administradores pueden escribir
+    }
+  }
+} 
