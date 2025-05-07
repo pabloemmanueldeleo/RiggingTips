@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - RiggingTips</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        .admin-header { 
+            background-color: var(--primary-color);
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+        }
+        .admin-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+        .edit-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+        }
+        .edit-form {
+            background: white;
+            padding: 2rem;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .edit-form textarea {
+            min-height: 150px;
+        }
+        .add-button {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            font-size: 2rem;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s;
+        }
+        .add-button:hover {
+            transform: scale(1.1);
+        }
+        .card.editable {
+            position: relative;
+        }
+        .card-actions {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            display: flex;
+            gap: 0.5rem;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .card.editable:hover .card-actions {
+            opacity: 1;
+        }
+        .action-btn {
+            background: white;
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transition: transform 0.2s;
+        }
+        .action-btn:hover {
+            transform: scale(1.1);
+        }
+        .action-btn.edit { color: #2196F3; }
+        .action-btn.delete { color: #F44336; }
+        .login-container {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="admin-header">
+        <h1>RiggingTips - Panel de Administración</h1>
+        <div class="admin-controls">
+            <div id="userInfo"></div>
+            <button id="logoutBtn" style="display:none" class="btn">Cerrar sesión</button>
+        </div>
+    </header>
+
+    <!-- Login Container -->
+    <div id="loginContainer" class="login-container">
+        <h2>Iniciar Sesión</h2>
+        <p>Debes iniciar sesión con tu cuenta de administrador.</p>
+        <button id="loginBtn" class="btn btn-primary">
+            <img src="https://www.google.com/favicon.ico" alt="Google" style="width: 18px; height: 18px; margin-right: 10px; vertical-align: middle;">
+            Iniciar sesión con Google
+        </button>
+    </div>
+
+    <!-- Main Content (similar to public index) -->
+    <main class="container" style="display:none" id="adminContent">
+        <div class="search-container">
+            <input type="text" id="searchInput" class="form-control" placeholder="Buscar tips...">
+            <button class="btn btn-primary" id="searchBtn">Buscar</button>
+        </div>
+
+        <div id="categoriasBar" class="categorias-bar"></div>
+        <div id="nodosGrid" class="grid"></div>
+
+        <!-- Add Button -->
+        <button class="add-button" id="addNodoBtn" title="Agregar nuevo tip">+</button>
+    </main>
+
+    <!-- Edit Overlay -->
+    <div class="edit-overlay" id="editOverlay">
+        <form class="edit-form" id="nodoForm">
+            <h2 id="formTitle">Editar Tip</h2>
+            <input type="hidden" id="nodoId">
+            <div style="margin-bottom: 1rem;">
+                <label for="nodoNombre">Título</label>
+                <input type="text" id="nodoNombre" class="form-control" required>
+            </div>
+            <div style="margin-bottom: 1rem;">
+                <label for="nodoDescripcion">Descripción</label>
+                <textarea id="nodoDescripcion" class="form-control" required></textarea>
+            </div>
+            <div style="margin-bottom: 1rem;">
+                <label for="nodoCategoria">Categoría</label>
+                <select id="nodoCategoria" class="form-control" required></select>
+            </div>
+            <div style="margin-bottom: 1rem;">
+                <label for="nodoImagen">URL de imagen</label>
+                <input type="text" id="nodoImagen" class="form-control" placeholder="URL de imagen (opcional)">
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 1rem;">
+                <button type="button" class="btn" onclick="closeEditOverlay()">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Guardar</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-storage-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+    <script src="js/categorias.js"></script>
+    <script src="js/admin.js"></script>
+</body>
+</html> 

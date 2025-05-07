@@ -5,24 +5,23 @@ yarn-debug.log*
 yarn-error.log*
 package-lock.json
 
-# Firebase
-.firebase/
-firebase-debug.log
-serviceAccountKey.json
-.runtimeconfig.json
-ui-debug.log
-firebase-adminsdk-*.json
-firebase-export-*.json
-database-*.json
-firestore-*.json
-
-# Environment variables
+# Environment variables and configuration
 .env
-.env.*
 .env.local
 .env.development
+.env.test
 .env.production
 *.env
+public/js/env.js
+**/js/env.js
+
+# Firebase
+.firebase/
+firebase-debug.log*
+firebase-debug.*.log*
+firebase-adminsdk-*.json
+serviceAccountKey.json
+*-service-account.json
 
 # Build
 dist/
@@ -44,27 +43,31 @@ Thumbs.db
 desktop.ini
 *.lnk
 
-# Backup
-backup/
-*.bak
-*.backup
-*_backup_*.json
-*-backup.*
+# Backups and exports
+**/backups/
+**/exports/
+*-export.json
+*-backup.json
 
-# Private/Sensitive Data
-**/private/
-**/secrets/
+# Security and keys
 **/*.key
 **/*.pem
-**/*-key.*
-**/credentials/
+**/*.p12
 **/*secret*
 **/*password*
-**/*token*
+**/credentials/
+**/private/
+
+# Keep these files in version control
+!.firebaserc
+!firebase.json
+!.env.example
+!firestore.rules
+!storage.rules
+!database.rules.json
 
 # Firestore exports
 riggingtips-default-rtdb-export.json
-*-export.json
 *-import.json
 *export*.json
 *import*.json
@@ -77,5 +80,4 @@ temp/
 
 # Cache
 .cache/
-.firebase/
 .firebaserc

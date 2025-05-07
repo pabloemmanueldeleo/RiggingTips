@@ -1,43 +1,43 @@
 // Configuración de Firebase
 const firebaseConfig = {
-    apiKey: "AIzaSyBduxYP7UL2ywULkzbDStGq5938dhKbsbA",
-    authDomain: "riggingtips.firebaseapp.com",
-    databaseURL: "https://riggingtips-default-rtdb.firebaseio.com",
-    projectId: "riggingtips",
-    storageBucket: "riggingtips.appspot.com",
-    messagingSenderId: "821610458031",
-    appId: "1:821610458031:web:17b94dcb8d9d10e89c9d5a"
+    apiKey: window._env_?.FIREBASE_API_KEY,
+    authDomain: window._env_?.FIREBASE_AUTH_DOMAIN,
+    projectId: window._env_?.FIREBASE_PROJECT_ID,
+    storageBucket: window._env_?.FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: window._env_?.FIREBASE_MESSAGING_SENDER_ID,
+    appId: window._env_?.FIREBASE_APP_ID,
+    databaseURL: window._env_?.FIREBASE_DATABASE_URL
 };
+
+// Validar que todas las configuraciones estén presentes
+if (!window._env_) {
+    throw new Error('Las variables de entorno no están configuradas. Asegúrate de que el archivo env.js se haya generado correctamente.');
+}
+
+Object.entries(firebaseConfig).forEach(([key, value]) => {
+    if (!value) {
+        throw new Error(`La configuración de Firebase está incompleta: falta ${key}`);
+    }
+});
 
 // Inicializar Firebase
 firebase.initializeApp(firebaseConfig);
 
-// Exportar servicios
+// Exportar servicios de Firebase
 const auth = firebase.auth();
 const db = firebase.firestore();
 const storage = firebase.storage();
+const rtdb = firebase.database();
 
-// Configuración de Firestore
-db.settings({
-    cacheSizeBytes: firebase.firestore.CACHE_SIZE_UNLIMITED
-});
+// Habilitar persistencia offline para Firestore
 db.enablePersistence()
     .catch((err) => {
         if (err.code == 'failed-precondition') {
-            console.warn('La persistencia falló, múltiples pestañas abiertas');
+            console.warn('La persistencia falló: múltiples pestañas abiertas');
         } else if (err.code == 'unimplemented') {
             console.warn('El navegador no soporta persistencia');
         }
     });
 
-// Exportar servicios con métodos getter para asegurar acceso
-window.firebaseService = {
-    auth,
-    db,
-    storage,
-    firebase,
-    initialized: true,
-    getAuth: () => auth,
-    getDb: () => db,
-    getStorage: () => storage
-}; 
+// Exportar la configuración y servicios
+export { auth, db, storage, rtdb, firebaseConfig }; 

@@ -1,5 +1,13 @@
 // Módulo principal de la aplicación
 const app = {
+    // Variables globales
+    categorias: [],
+    allNodos: [],
+    currentFilter: '',
+    currentPage: 1,
+    itemsPerPage: 25, // 5x5 grid
+    sortOrder: 'nuevo', // valores posibles: 'nuevo', 'antiguo'
+    
     async init() {
         try {
             // Esperar a que Firebase esté inicializado
@@ -12,6 +20,9 @@ const app = {
             
             // Inicializar búsqueda
             this.setupSearch();
+            
+            // Inicializar control de ordenamiento
+            this.setupSortControl();
             
             // Cargar datos iniciales
             await this.loadData();
@@ -47,6 +58,32 @@ const app = {
             });
         }
     },
+    
+    setupSortControl() {
+        // Crear el control de ordenamiento
+        const searchContainer = document.querySelector('.search-container');
+        
+        if (searchContainer) {
+            const sortControl = document.createElement('div');
+            sortControl.className = 'sort-control';
+            sortControl.innerHTML = `
+                <label for="sortSelect">Ordenar por:</label>
+                <select id="sortSelect">
+                    <option value="nuevo" selected>Más recientes primero</option>
+                    <option value="antiguo">Más antiguos primero</option>
+                </select>
+            `;
+            
+            // Insertar después del contenedor de búsqueda
+            searchContainer.parentNode.insertBefore(sortControl, searchContainer.nextSibling);
+            
+            // Agregar event listener
+            document.getElementById('sortSelect').addEventListener('change', (e) => {
+                this.sortOrder = e.target.value;
+                this.loadData();
+            });
+        }
+    },
 
     async loadData() {
         try {
@@ -63,42 +100,17 @@ const app = {
                 ...doc.data()
             }));
             
-            if (!categoriasSnapshot.empty) {
-                categoriasBar.innerHTML = `
-                    <button class="categoria-btn active" data-categoria="todas">Todas</button>
-                `;
-                
-                categoriasSnapshot.forEach(doc => {
-                    const categoria = doc.data();
-                    if (categoria && categoria.nombre) {
-                        const categoriaBtn = document.createElement('button');
-                        categoriaBtn.className = 'categoria-btn';
-                        categoriaBtn.setAttribute('data-categoria', categoria.nombre);
-                        
-                        // Aplicar estilo de color si existe
-                        if (categoria.color) {
-                            categoriaBtn.style.backgroundColor = `${categoria.color}40`; // Versión transparente
-                            categoriaBtn.style.borderColor = categoria.color;
-                            categoriaBtn.style.color = this.getContrastColor(categoria.color);
-                        }
-                        
-                        categoriaBtn.textContent = categoria.nombre;
-                        categoriaBtn.addEventListener('click', () => this.filtrarPorCategoria(categoria.nombre));
-                        categoriasBar.appendChild(categoriaBtn);
-                    }
-                });
-                
-                // Agregar evento al botón "Todas"
-                const btnTodas = categoriasBar.querySelector('[data-categoria="todas"]');
-                if (btnTodas) {
-                    btnTodas.addEventListener('click', () => this.loadData());
-                }
+            // Cargar nodos PÚBLICOS (publico = true)
+            let query = db.collection('nodos').where('publico', '==', true);
+            
+            // Aplicar ordenamiento
+            if (this.sortOrder === 'nuevo') {
+                query = query.orderBy('creado', 'desc');
+            } else if (this.sortOrder === 'antiguo') {
+                query = query.orderBy('creado', 'asc');
             }
             
-            // Cargar nodos PÚBLICOS (publico = true)
-            const nodosSnapshot = await db.collection('nodos')
-                .where('publico', '==', true)
-                .get();
+            const nodosSnapshot = await query.get();
             
             if (nodosSnapshot.empty) {
                 console.log('No hay nodos públicos disponibles en la colección "nodos"');
@@ -115,13 +127,21 @@ const app = {
 
             console.log(`Se encontraron ${nodosSnapshot.size} nodos públicos`);
             
-            const nodosGrid = document.getElementById('nodosGrid');
-            nodosGrid.innerHTML = ''; // Limpiar grid existente
+            // Guardar todos los nodos
+            this.allNodos = nodosSnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
             
-            nodosSnapshot.forEach(doc => {
-                const nodo = doc.data();
-                this.renderNodo(nodo, doc.id);
-            });
+            // Reiniciar a la primera página al cambiar los datos
+            this.currentPage = 1;
+            
+            // Renderizar categorías
+            this.renderCategorias();
+            
+            // Renderizar nodos
+            this.renderNodos();
+            
         } catch (error) {
             console.error('Error al cargar los datos:', error);
             
@@ -134,9 +154,68 @@ const app = {
             `;
         }
     },
+    
+    renderCategorias() {
+        if (!this.categorias) return;
+        
+        const categoriasBar = document.getElementById('categoriasBar');
+        if (!categoriasBar) return;
+        
+        categoriasBar.innerHTML = `
+            <button class="categoria-btn ${!this.currentFilter ? 'active' : ''}" data-categoria="todas">
+                Todas <span class="category-count">${this.getCategoryCount('')}</span>
+            </button>
+        `;
+        
+        this.categorias.forEach(categoria => {
+            if (categoria && categoria.nombre) {
+                const categoriaBtn = document.createElement('button');
+                categoriaBtn.className = 'categoria-btn';
+                categoriaBtn.setAttribute('data-categoria', categoria.nombre);
+                
+                // Verificar si esta categoría está activa
+                if (this.currentFilter === categoria.nombre) {
+                    categoriaBtn.classList.add('active');
+                }
+                
+                // Agregar contador de tips
+                const count = this.getCategoryCount(categoria.nombre);
+                
+                // Aplicar estilo de color si existe
+                if (categoria.color) {
+                    categoriaBtn.style.backgroundColor = `${categoria.color}40`; // Versión transparente
+                    categoriaBtn.style.borderColor = categoria.color;
+                    categoriaBtn.style.color = this.getContrastColor(categoria.color);
+                }
+                
+                categoriaBtn.innerHTML = `${categoria.nombre} <span class="category-count">${count}</span>`;
+                categoriaBtn.addEventListener('click', () => this.filtrarPorCategoria(categoria.nombre));
+                categoriasBar.appendChild(categoriaBtn);
+            }
+        });
+        
+        // Agregar evento al botón "Todas"
+        const btnTodas = categoriasBar.querySelector('[data-categoria="todas"]');
+        if (btnTodas) {
+            btnTodas.addEventListener('click', () => {
+                this.currentFilter = '';
+                this.loadData();
+            });
+        }
+    },
+    
+    // Obtener el conteo de tips para una categoría
+    getCategoryCount(categoria) {
+        if (!categoria) {
+            return this.allNodos.length;
+        }
+        return this.allNodos.filter(nodo => nodo.categoria === categoria).length;
+    },
 
     async filtrarPorCategoria(categoria) {
         try {
+            this.currentFilter = categoria;
+            
             const { db } = window.firebaseService;
             
             // Actualizar botones de categoría
@@ -150,27 +229,31 @@ const app = {
             });
             
             // Filtrar nodos públicos por categoría
-            const nodosSnapshot = await db.collection('nodos')
+            let query = db.collection('nodos')
                 .where('categoria', '==', categoria)
-                .where('publico', '==', true)
-                .get();
+                .where('publico', '==', true);
             
-            const nodosGrid = document.getElementById('nodosGrid');
-            nodosGrid.innerHTML = '';
-            
-            if (nodosSnapshot.empty) {
-                nodosGrid.innerHTML = `
-                    <div class="mensaje-informativo">
-                        <p>No hay tips en la categoría "${categoria}".</p>
-                    </div>
-                `;
-                return;
+            // Aplicar ordenamiento
+            if (this.sortOrder === 'nuevo') {
+                query = query.orderBy('creado', 'desc');
+            } else if (this.sortOrder === 'antiguo') {
+                query = query.orderBy('creado', 'asc');
             }
             
-            nodosSnapshot.forEach(doc => {
-                const nodo = doc.data();
-                this.renderNodo(nodo, doc.id);
-            });
+            const nodosSnapshot = await query.get();
+            
+            // Actualizar la lista de nodos
+            this.allNodos = nodosSnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+            
+            // Reiniciar a primera página
+            this.currentPage = 1;
+            
+            // Renderizar nodos filtrados
+            this.renderNodos();
+            
         } catch (error) {
             console.error('Error al filtrar por categoría:', error);
             
@@ -213,25 +296,105 @@ const app = {
                     });
                 }
             });
-
-            const nodosGrid = document.getElementById('nodosGrid');
-            nodosGrid.innerHTML = ''; // Limpiar resultados anteriores
-
-            if (resultados.length === 0) {
-                nodosGrid.innerHTML = '<p class="no-results">No se encontraron resultados</p>';
-                return;
+            
+            // Ordenar resultados
+            if (this.sortOrder === 'nuevo') {
+                resultados.sort((a, b) => {
+                    const dateA = a.creado ? new Date(a.creado.seconds * 1000) : new Date(0);
+                    const dateB = b.creado ? new Date(b.creado.seconds * 1000) : new Date(0);
+                    return dateB - dateA;
+                });
+            } else {
+                resultados.sort((a, b) => {
+                    const dateA = a.creado ? new Date(a.creado.seconds * 1000) : new Date(0);
+                    const dateB = b.creado ? new Date(b.creado.seconds * 1000) : new Date(0);
+                    return dateA - dateB;
+                });
             }
-
-            resultados.forEach(nodo => {
-                this.renderNodo(nodo, nodo.id);
-            });
+            
+            // Actualizar la lista de nodos
+            this.allNodos = resultados;
+            
+            // Reiniciar a primera página
+            this.currentPage = 1;
+            
+            // Renderizar nodos con la búsqueda
+            this.renderNodos();
+            
         } catch (error) {
             console.error('Error al realizar la búsqueda:', error);
         }
     },
 
-    renderNodo(nodo, id) {
+    renderNodos() {
         const nodosGrid = document.getElementById('nodosGrid');
+        nodosGrid.innerHTML = ''; // Limpiar grid existente
+        
+        if (this.allNodos.length === 0) {
+            nodosGrid.innerHTML = '<p class="no-results">No se encontraron resultados</p>';
+            return;
+        }
+        
+        // Calcular paginación
+        const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+        const endIndex = Math.min(startIndex + this.itemsPerPage, this.allNodos.length);
+        const paginatedNodos = this.allNodos.slice(startIndex, endIndex);
+        
+        // Crear grid para los nodos
+        const nodosContainer = document.createElement('div');
+        nodosContainer.className = 'nodos-grid';
+        nodosGrid.appendChild(nodosContainer);
+        
+        // Renderizar cada nodo
+        paginatedNodos.forEach(nodo => {
+            this.renderNodo(nodo, nodo.id, nodosContainer);
+        });
+        
+        // Crear controles de paginación si hay más de una página
+        if (this.allNodos.length > this.itemsPerPage) {
+            const totalPages = Math.ceil(this.allNodos.length / this.itemsPerPage);
+            
+            const paginationControls = document.createElement('div');
+            paginationControls.className = 'pagination-controls';
+            
+            // Información de paginación
+            paginationControls.innerHTML = `
+                <div class="pagination-info">
+                    Mostrando ${startIndex + 1}-${endIndex} de ${this.allNodos.length} tips
+                </div>
+                <div class="pagination-buttons">
+                    <button class="pagination-btn" id="prevPage" ${this.currentPage === 1 ? 'disabled' : ''}>
+                        &laquo; Anterior
+                    </button>
+                    <span class="page-indicator">Página ${this.currentPage} de ${totalPages}</span>
+                    <button class="pagination-btn" id="nextPage" ${this.currentPage === totalPages ? 'disabled' : ''}>
+                        Siguiente &raquo;
+                    </button>
+                </div>
+            `;
+            
+            nodosGrid.appendChild(paginationControls);
+            
+            // Event listeners para paginación
+            document.getElementById('prevPage').addEventListener('click', () => {
+                if (this.currentPage > 1) {
+                    this.currentPage--;
+                    this.renderNodos();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            });
+            
+            document.getElementById('nextPage').addEventListener('click', () => {
+                if (this.currentPage < totalPages) {
+                    this.currentPage++;
+                    this.renderNodos();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            });
+        }
+    },
+
+    renderNodo(nodo, id, container) {
         const nodoElement = document.createElement('div');
         nodoElement.className = 'nodo-card';
         nodoElement.setAttribute('data-id', id);
@@ -261,6 +424,14 @@ const app = {
             `;
         }
         
+        // Formatear fecha de creación si existe
+        let fechaHTML = '';
+        if (nodo.creado) {
+            const fecha = new Date(nodo.creado.seconds * 1000);
+            const opciones = { year: 'numeric', month: 'short', day: 'numeric' };
+            fechaHTML = `<span class="fecha-creacion">Añadido: ${fecha.toLocaleDateString('es-ES', opciones)}</span>`;
+        }
+        
         nodoElement.innerHTML = `
             ${mediaHTML}
             <h3>${titulo}</h3>
@@ -270,16 +441,15 @@ const app = {
                     <span class="categoria-color-indicator" style="background-color: ${categoriaColor}"></span>
                     ${categoria}
                 </span>
+                ${fechaHTML}
             </div>
         `;
-        nodosGrid.appendChild(nodoElement);
+        container.appendChild(nodoElement);
         
         // Agregar evento de clic a toda la tarjeta
         nodoElement.addEventListener('click', () => {
             this.verDetalles(id);
         });
-        
-        console.log(`Nodo renderizado: ${id} - ${titulo}`);
     },
 
     // Función de utilidad para determinar el color de texto según el fondo
@@ -346,13 +516,32 @@ const app = {
                 }
             }
             
+            // Formatear fecha de creación si existe
+            let fechaHTML = '';
+            if (nodo.creado) {
+                const fecha = new Date(nodo.creado.seconds * 1000);
+                const opciones = { year: 'numeric', month: 'short', day: 'numeric' };
+                fechaHTML = `<span class="fecha-creacion">Añadido: ${fecha.toLocaleDateString('es-ES', opciones)}</span>`;
+            }
+            
+            // Obtener color de la categoría
+            let categoriaColor = '#4caf50'; // Color por defecto
+            const categoriaObj = this.categorias.find(cat => cat.nombre === nodo.categoria);
+            if (categoriaObj && categoriaObj.color) {
+                categoriaColor = categoriaObj.color;
+            }
+            
             modal.innerHTML = `
                 ${mediaHTML}
                 <h3>${nodo.titulo || 'Sin título'}</h3>
                 <p>${nodo.descripcion || 'Sin descripción'}</p>
                 ${nodo.contenido ? `<div class="contenido">${nodo.contenido}</div>` : ''}
                 <div class="modal-footer">
-                    <span class="categoria">${nodo.categoria || 'Sin categoría'}</span>
+                    <span class="categoria" style="background-color: ${categoriaColor}80; color: ${this.getContrastColor(categoriaColor)}">
+                        <span class="categoria-color-indicator" style="background-color: ${categoriaColor}"></span>
+                        ${nodo.categoria || 'Sin categoría'}
+                    </span>
+                    ${fechaHTML}
                 </div>
             `;
             

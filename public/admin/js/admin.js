@@ -10,6 +10,9 @@ const adminModule = {
     allTips: [],
     currentFilter: '',
     user: null,
+    currentPage: 1,
+    itemsPerPage: 25,
+    sortOrder: 'nuevo', // valores posibles: 'nuevo', 'antiguo'
     
     // Inicialización
     async init() {
@@ -232,6 +235,13 @@ const adminModule = {
                 query = query.where('categoria', '==', this.currentFilter);
             }
             
+            // Ordenar por fecha
+            if (this.sortOrder === 'nuevo') {
+                query = query.orderBy('creado', 'desc');
+            } else if (this.sortOrder === 'antiguo') {
+                query = query.orderBy('creado', 'asc');
+            }
+            
             const snapshot = await query.get();
             
             if (snapshot.empty) {
@@ -244,7 +254,9 @@ const adminModule = {
             }));
             
             console.log('Tips cargados:', this.allTips.length);
+            this.currentPage = 1; // Reiniciar a la primera página
             this.renderTips();
+            this.renderCategoriesBar(); // Actualizar conteo de categorías
             
         } catch (error) {
             console.error('Error al cargar tips:', error);
@@ -284,7 +296,7 @@ const adminModule = {
         
         bar.innerHTML = `
             <button class="categoria-btn ${!this.currentFilter ? 'active' : ''}" data-categoria="">
-                Todas
+                Todas <span class="category-count">${this.getCategoryCount('')}</span>
             </button>
         `;
         
@@ -292,6 +304,9 @@ const adminModule = {
             const btn = document.createElement('button');
             btn.className = `categoria-btn ${this.currentFilter === categoria.nombre ? 'active' : ''}`;
             btn.setAttribute('data-categoria', categoria.nombre);
+            
+            // Agregar contador de tips
+            const count = this.getCategoryCount(categoria.nombre);
             
             // Aplicar estilo de color si existe
             if (categoria.color) {
@@ -302,10 +317,18 @@ const adminModule = {
                 }
             }
             
-            btn.textContent = categoria.nombre;
+            btn.innerHTML = `${categoria.nombre} <span class="category-count">${count}</span>`;
             btn.addEventListener('click', () => this.filterByCategory(categoria.nombre));
             bar.appendChild(btn);
         });
+    },
+    
+    // Obtener el conteo de tips para una categoría
+    getCategoryCount(categoria) {
+        if (!categoria) {
+            return this.allTips.length;
+        }
+        return this.allTips.filter(tip => tip.categoria === categoria).length;
     },
     
     renderTips() {
@@ -317,7 +340,35 @@ const adminModule = {
             return;
         }
         
-        this.allTips.forEach(tip => {
+        // Calcular paginación
+        const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+        const endIndex = Math.min(startIndex + this.itemsPerPage, this.allTips.length);
+        const paginatedTips = this.allTips.slice(startIndex, endIndex);
+        
+        // Crear controles de ordenamiento
+        const sortControls = document.createElement('div');
+        sortControls.className = 'sort-controls';
+        sortControls.innerHTML = `
+            <span>Ordenar por: </span>
+            <select id="sortOrder">
+                <option value="nuevo" ${this.sortOrder === 'nuevo' ? 'selected' : ''}>Más recientes primero</option>
+                <option value="antiguo" ${this.sortOrder === 'antiguo' ? 'selected' : ''}>Más antiguos primero</option>
+            </select>
+        `;
+        container.appendChild(sortControls);
+        
+        // Añadir event listener al control de ordenamiento
+        document.getElementById('sortOrder').addEventListener('change', (e) => {
+            this.sortOrder = e.target.value;
+            this.loadTips(); // Recargar con nuevo orden
+        });
+        
+        // Crear grid para los tips
+        const tipsGrid = document.createElement('div');
+        tipsGrid.className = 'tips-grid';
+        container.appendChild(tipsGrid);
+        
+        paginatedTips.forEach(tip => {
             const card = document.createElement('div');
             card.className = 'tip-card';
             
@@ -359,8 +410,51 @@ const adminModule = {
             card.querySelector('.edit-btn').addEventListener('click', () => this.showTipForm(tip.id));
             card.querySelector('.delete-btn').addEventListener('click', () => this.confirmDeleteTip(tip.id));
             
-            container.appendChild(card);
+            tipsGrid.appendChild(card);
         });
+        
+        // Crear controles de paginación si hay más de una página
+        if (this.allTips.length > this.itemsPerPage) {
+            const totalPages = Math.ceil(this.allTips.length / this.itemsPerPage);
+            
+            const paginationControls = document.createElement('div');
+            paginationControls.className = 'pagination-controls';
+            
+            // Información de paginación
+            paginationControls.innerHTML = `
+                <div class="pagination-info">
+                    Mostrando ${startIndex + 1}-${endIndex} de ${this.allTips.length} tips
+                </div>
+                <div class="pagination-buttons">
+                    <button class="pagination-btn" id="prevPage" ${this.currentPage === 1 ? 'disabled' : ''}>
+                        &laquo; Anterior
+                    </button>
+                    <span class="page-indicator">Página ${this.currentPage} de ${totalPages}</span>
+                    <button class="pagination-btn" id="nextPage" ${this.currentPage === totalPages ? 'disabled' : ''}>
+                        Siguiente &raquo;
+                    </button>
+                </div>
+            `;
+            
+            container.appendChild(paginationControls);
+            
+            // Event listeners para paginación
+            document.getElementById('prevPage').addEventListener('click', () => {
+                if (this.currentPage > 1) {
+                    this.currentPage--;
+                    this.renderTips();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            });
+            
+            document.getElementById('nextPage').addEventListener('click', () => {
+                if (this.currentPage < totalPages) {
+                    this.currentPage++;
+                    this.renderTips();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            });
+        }
     },
     
     // Función de utilidad para determinar el color de texto según el fondo
@@ -445,6 +539,11 @@ const adminModule = {
     
     showTipForm(tipId = null) {
         this.showModal(tipId);
+        
+        // Si es un nuevo tip, marcar como privado por defecto
+        if (!tipId) {
+            document.getElementById('publico').checked = false;
+        }
     },
     
     async uploadFile(file, path) {

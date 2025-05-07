@@ -4,11 +4,12 @@
   "description": "Aplicación web para compartir tips y trucos de rigging",
   "main": "index.js",
   "scripts": {
-    "start": "firebase serve",
+    "generate-env": "node generate-env.js",
+    "predeploy": "npm run generate-env",
     "deploy": "firebase deploy"
   },
   "dependencies": {
-    "dotenv": "^16.5.0",
+    "dotenv": "^16.3.1",
     "firebase": "^10.14.1",
     "firebase-admin": "^13.3.0"
   },

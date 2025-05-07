@@ -1041,4 +1041,116 @@ header {
 
 .color-preset.selected {
     animation: pulse 1.5s infinite ease-in-out;
+}
+
+/* Contadores de categorías */
+.category-count {
+    display: inline-block;
+    background-color: rgba(0,0,0,0.1);
+    border-radius: 12px;
+    padding: 0.15rem 0.5rem;
+    font-size: 0.75rem;
+    margin-left: 0.5rem;
+    font-weight: 500;
+}
+
+.categoria-btn.active .category-count {
+    background-color: rgba(255,255,255,0.25);
+}
+
+/* Controles de ordenamiento */
+.sort-controls {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    margin-bottom: 1rem;
+    padding: 0.5rem 0;
+    font-size: 0.9rem;
+}
+
+.sort-controls span {
+    margin-right: 0.5rem;
+    color: var(--on-surface);
+    font-weight: 500;
+}
+
+.sort-controls select {
+    background-color: var(--surface-container);
+    border: 1px solid var(--outline);
+    border-radius: 8px;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.9rem;
+    color: var(--on-surface);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.sort-controls select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px var(--primary-container);
+}
+
+/* Paginación */
+.pagination-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--outline);
+    grid-column: 1 / -1;
+}
+
+.pagination-info {
+    font-size: 0.9rem;
+    color: var(--outline);
+    margin-bottom: 0.75rem;
+}
+
+.pagination-buttons {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.pagination-btn {
+    background-color: var(--surface-container);
+    border: 1px solid var(--outline);
+    border-radius: 20px;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    color: var(--on-surface);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.pagination-btn:hover:not(:disabled) {
+    background-color: var(--primary-container);
+    border-color: var(--primary-color);
+    transform: translateY(-2px);
+}
+
+.pagination-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.page-indicator {
+    font-size: 0.9rem;
+    color: var(--on-surface);
+    font-weight: 500;
+}
+
+/* Responsive para paginación */
+@media (max-width: 768px) {
+    .pagination-controls {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .pagination-buttons {
+        width: 100%;
+        justify-content: space-between;
+    }
 } 
