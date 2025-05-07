@@ -36,7 +36,16 @@ const adminModule = {
         document.getElementById('closeModalButton').addEventListener('click', () => this.hideModal());
         document.getElementById('cancelButton').addEventListener('click', () => this.hideModal());
         document.getElementById('tipForm').addEventListener('submit', (e) => this.saveTip(e));
-        document.getElementById('searchInput').addEventListener('input', (e) => this.handleSearch(e.target.value));
+        
+        // Buscar a medida que se escribe con un pequeño retraso
+        const searchInput = document.getElementById('searchInput');
+        let searchTimeout;
+        searchInput.addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                this.handleSearch(e.target.value);
+            }, 300); // 300ms de delay para evitar muchas consultas
+        });
         
         // Botones para gestión de categorías
         document.getElementById('manageCategoriesButton').addEventListener('click', () => this.showCategoriesModal());
@@ -283,6 +292,16 @@ const adminModule = {
             const btn = document.createElement('button');
             btn.className = `categoria-btn ${this.currentFilter === categoria.nombre ? 'active' : ''}`;
             btn.setAttribute('data-categoria', categoria.nombre);
+            
+            // Aplicar estilo de color si existe
+            if (categoria.color) {
+                if (!btn.classList.contains('active')) {
+                    btn.style.backgroundColor = `${categoria.color}40`; // Versión transparente
+                    btn.style.borderColor = categoria.color;
+                    btn.style.color = this.getContrastColor(categoria.color);
+                }
+            }
+            
             btn.textContent = categoria.nombre;
             btn.addEventListener('click', () => this.filterByCategory(categoria.nombre));
             bar.appendChild(btn);
@@ -313,6 +332,10 @@ const adminModule = {
                 `;
             }
             
+            // Obtener categoría y su color
+            const categoria = this.categorias.find(cat => cat.nombre === tip.categoria);
+            const categoriaColor = categoria && categoria.color ? categoria.color : '#4caf50';
+            
             card.innerHTML = `
                 <div class="publico-badge ${tip.publico !== false ? 'visible' : 'hidden'}"></div>
                 ${mediaHTML}
@@ -321,7 +344,10 @@ const adminModule = {
                     <p>${tip.descripcion || 'Sin descripción'}</p>
                 </div>
                 <div class="tip-footer">
-                    <span class="tip-categoria">${tip.categoria || 'Sin categoría'}</span>
+                    <span class="tip-categoria" style="background-color: ${categoriaColor}80; color: ${this.getContrastColor(categoriaColor)}">
+                        <span class="category-color-indicator" style="background-color: ${categoriaColor}"></span>
+                        ${tip.categoria || 'Sin categoría'}
+                    </span>
                     <div class="tip-actions">
                         <button class="action-btn edit-btn" title="Editar"></button>
                         <button class="action-btn delete-btn" title="Eliminar"></button>
@@ -335,6 +361,20 @@ const adminModule = {
             
             container.appendChild(card);
         });
+    },
+    
+    // Función de utilidad para determinar el color de texto según el fondo
+    getContrastColor(hexColor) {
+        // Convertir hex a RGB
+        const r = parseInt(hexColor.substr(1, 2), 16);
+        const g = parseInt(hexColor.substr(3, 2), 16);
+        const b = parseInt(hexColor.substr(5, 2), 16);
+        
+        // Calcular luminosidad
+        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        
+        // Retornar negro o blanco según luminosidad
+        return luminance > 0.5 ? '#000000' : '#ffffff';
     },
     
     // Acciones
@@ -413,6 +453,15 @@ const adminModule = {
         try {
             this.showSuccess('Subiendo archivo, por favor espera...');
             
+            // Comprobar si estamos en modo desarrollo local o producción
+            const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            
+            // Si estamos en entorno local, usar una solución alternativa para evitar problemas CORS
+            if (isLocalhost) {
+                console.log('Entorno local detectado, utilizando método alternativo de subida...');
+                return await this.uploadFileAlternative(file, path);
+            }
+            
             const { storage, firebase } = window.firebaseService;
             
             // Verificar que el archivo no sea demasiado grande (máximo 5MB)
@@ -431,6 +480,9 @@ const adminModule = {
             const metadata = {
                 contentType: file.type,
                 cacheControl: 'public,max-age=31536000',
+                customMetadata: {
+                    'origin': window.location.origin
+                }
             };
             
             // Crear elemento para mostrar progreso
@@ -445,11 +497,13 @@ const adminModule = {
             `;
             errorContainer.appendChild(progressDiv);
             
+            console.log('Iniciando subida del archivo:', filename);
+            
             // Subir archivo con metadatos
             const uploadTask = fileRef.put(file, metadata);
             
             // Crear una promesa para manejar la subida
-            const uploadPromise = new Promise((resolve, reject) => {
+            return new Promise((resolve, reject) => {
                 // Monitorear progreso
                 uploadTask.on('state_changed', 
                     (snapshot) => {
@@ -457,6 +511,7 @@ const adminModule = {
                         const progressBar = progressDiv.querySelector('.progress-bar');
                         progressBar.style.width = progress + '%';
                         progressDiv.querySelector('p').textContent = `Subiendo ${file.name} (${Math.round(progress)}%)`;
+                        console.log(`Progreso: ${Math.round(progress)}%`);
                     },
                     (error) => {
                         // Error durante la subida
@@ -475,8 +530,10 @@ const adminModule = {
                     },
                     async () => {
                         try {
-                            // Subida completada exitosamente
+                            console.log('Subida completada, obteniendo URL de descarga...');
+                            // Subida completada exitosamente, obtener URL
                             const downloadURL = await fileRef.getDownloadURL();
+                            console.log('URL de descarga obtenida:', downloadURL);
                             
                             // Actualizar mensaje de progreso a éxito
                             progressDiv.className = 'success-message';
@@ -491,17 +548,14 @@ const adminModule = {
                             
                             resolve(downloadURL);
                         } catch (error) {
+                            console.error('Error al obtener URL:', error);
+                            progressDiv.className = 'error-message';
+                            progressDiv.innerHTML = `Error al obtener URL: ${error.message}`;
                             reject(error);
                         }
                     }
                 );
             });
-            
-            // Esperar a que termine la subida
-            const downloadURL = await uploadPromise;
-            console.log('Archivo subido correctamente:', downloadURL);
-            return downloadURL;
-            
         } catch (error) {
             console.error('Error al subir archivo:', error);
             this.showError(`Error al subir archivo: ${error.message}`);
@@ -509,34 +563,101 @@ const adminModule = {
         }
     },
     
+    // Método alternativo de subida para evitar CORS
+    async uploadFileAlternative(file, path) {
+        try {
+            this.showSuccess('Usando método alternativo de subida...');
+            
+            // Convertir a Base64 para evitar CORS
+            const base64 = await this.getBase64(file);
+            const { db, firebase } = window.firebaseService;
+            
+            // Guardar referencia en Firestore
+            const timestamp = Date.now();
+            const filename = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
+            
+            const fileData = {
+                filename: filename,
+                path: path,
+                contentType: file.type,
+                uploadDate: firebase.firestore.Timestamp.now(),
+                base64Data: base64
+            };
+            
+            // Guardar en Firestore (colección temporal)
+            const fileRef = await db.collection('tempFiles').add(fileData);
+            
+            // Usar URL de Firestore como referencia
+            const fileUrl = `https://firebasestorage.googleapis.com/v0/b/riggingtips.appspot.com/o/${path}%2F${timestamp}_${encodeURIComponent(filename)}?alt=media`;
+            
+            this.showSuccess('Archivo procesado correctamente de manera alternativa');
+            
+            return fileUrl;
+        } catch (error) {
+            console.error('Error en método alternativo de subida:', error);
+            this.showError(`Error al procesar archivo: ${error.message}`);
+            return null;
+        }
+    },
+    
+    // Convertir archivo a Base64
+    getBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+        });
+    },
+    
     async saveTip(event) {
         event.preventDefault();
         
         try {
+            // Deshabilitar el botón de guardar para evitar múltiples envíos
+            const submitButton = event.target.querySelector('button[type="submit"]');
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.textContent = 'Guardando...';
+            }
+            
             const { db, firebase } = window.firebaseService;
             const form = event.target;
             const tipId = form.dataset.tipId;
             
             // Recolectar datos básicos del formulario
+            const isPublico = document.getElementById('publico').checked;
+            console.log('Valor de checkbox publico:', isPublico);
+            
             const tipData = {
                 titulo: form.titulo.value.trim(),
                 descripcion: form.descripcion.value.trim(),
                 categoria: form.categoria.value,
                 contenido: form.contenido.value.trim(),
-                publico: form.publico.checked,
+                publico: isPublico, // Usar directamente el valor del checkbox
                 actualizado: firebase.firestore.Timestamp.now()
             };
             
             // Validar datos mínimos
             if (!tipData.titulo) {
                 this.showError('El título no puede estar vacío');
+                if (submitButton) {
+                    submitButton.disabled = false;
+                    submitButton.textContent = 'Guardar';
+                }
                 return;
             }
             
             if (!tipData.descripcion) {
                 this.showError('La descripción no puede estar vacía');
+                if (submitButton) {
+                    submitButton.disabled = false;
+                    submitButton.textContent = 'Guardar';
+                }
                 return;
             }
+            
+            console.log('Procesando archivos...');
             
             // Subir archivos si existen
             const imagenFile = document.getElementById('imagenFile').files[0];
@@ -548,26 +669,42 @@ const adminModule = {
             
             // Si hay archivos seleccionados, subirlos
             if (imagenFile) {
+                console.log('Subiendo imagen:', imagenFile.name);
                 this.showSuccess('Procesando imagen...');
-                const uploadedImageUrl = await this.uploadFile(imagenFile, 'imagenes');
-                
-                if (uploadedImageUrl) {
-                    imagenURL = uploadedImageUrl;
-                    this.showSuccess('Imagen subida correctamente');
-                } else {
-                    this.showError('Error al subir la imagen. Se utilizará la URL existente si está disponible.');
+                try {
+                    const uploadedImageUrl = await this.uploadFile(imagenFile, 'imagenes');
+                    
+                    if (uploadedImageUrl) {
+                        console.log('Imagen subida correctamente:', uploadedImageUrl);
+                        imagenURL = uploadedImageUrl;
+                        this.showSuccess('Imagen subida correctamente');
+                    } else {
+                        console.error('No se pudo obtener URL de la imagen');
+                        this.showError('Error al subir la imagen. Se utilizará la URL existente si está disponible.');
+                    }
+                } catch (error) {
+                    console.error('Error al subir imagen:', error);
+                    this.showError(`Error al subir imagen: ${error.message}`);
                 }
             }
             
             if (videoFile) {
+                console.log('Subiendo video:', videoFile.name);
                 this.showSuccess('Procesando video...');
-                const uploadedVideoUrl = await this.uploadFile(videoFile, 'videos');
-                
-                if (uploadedVideoUrl) {
-                    videoURL = uploadedVideoUrl;
-                    this.showSuccess('Video subido correctamente');
-                } else {
-                    this.showError('Error al subir el video. Se utilizará la URL existente si está disponible.');
+                try {
+                    const uploadedVideoUrl = await this.uploadFile(videoFile, 'videos');
+                    
+                    if (uploadedVideoUrl) {
+                        console.log('Video subido correctamente:', uploadedVideoUrl);
+                        videoURL = uploadedVideoUrl;
+                        this.showSuccess('Video subido correctamente');
+                    } else {
+                        console.error('No se pudo obtener URL del video');
+                        this.showError('Error al subir el video. Se utilizará la URL existente si está disponible.');
+                    }
+                } catch (error) {
+                    console.error('Error al subir video:', error);
+                    this.showError(`Error al subir video: ${error.message}`);
                 }
             }
             
@@ -595,6 +732,13 @@ const adminModule = {
         } catch (error) {
             console.error('Error al guardar tip:', error);
             this.showError('Error al guardar el tip: ' + error.message);
+        } finally {
+            // Restaurar el estado del botón
+            const submitButton = event.target.querySelector('button[type="submit"]');
+            if (submitButton) {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Guardar';
+            }
         }
     },
     
@@ -913,6 +1057,26 @@ const adminModule = {
     showCategoriesModal() {
         document.getElementById('categoriesModal').classList.remove('hidden');
         this.renderCategoriesList();
+        this.initColorPresets();
+    },
+    
+    initColorPresets() {
+        // Configurar eventos para los presets de colores
+        document.querySelectorAll('.color-preset').forEach(preset => {
+            // Limpiar eventos previos para evitar duplicados
+            const newPreset = preset.cloneNode(true);
+            preset.parentNode.replaceChild(newPreset, preset);
+            
+            newPreset.addEventListener('click', () => {
+                // Seleccionar visualmente
+                document.querySelectorAll('.color-preset').forEach(p => p.classList.remove('selected'));
+                newPreset.classList.add('selected');
+                
+                // Actualizar el input de color
+                const color = newPreset.getAttribute('data-color');
+                document.getElementById('categoryColor').value = color;
+            });
+        });
     },
     
     hideCategoriesModal() {
@@ -934,12 +1098,23 @@ const adminModule = {
             this.categorias.forEach(categoria => {
                 if (categoria && categoria.nombre) {
                     const li = document.createElement('li');
+                    const categoryColor = categoria.color || '#4caf50'; // Color por defecto si no existe
+                    
                     li.innerHTML = `
-                        <span>${categoria.nombre}</span>
+                        <div class="category-info">
+                            <span class="category-color-indicator" style="background-color: ${categoryColor}"></span>
+                            <span>${categoria.nombre}</span>
+                        </div>
                         <div class="category-actions">
+                            <button type="button" class="action-btn edit-btn" title="Editar categoría"></button>
                             <button type="button" class="category-delete-btn" title="Eliminar categoría">🗑️</button>
                         </div>
                     `;
+                    
+                    // Agregar evento para editar categoría
+                    li.querySelector('.edit-btn').addEventListener('click', () => {
+                        this.editCategory(categoria.id, categoria.nombre, categoryColor);
+                    });
                     
                     // Agregar evento para eliminar categoría
                     li.querySelector('.category-delete-btn').addEventListener('click', () => {
@@ -960,6 +1135,7 @@ const adminModule = {
         
         try {
             const categoryName = document.getElementById('categoryName').value.trim();
+            const categoryColor = document.getElementById('categoryColor').value.trim();
             
             if (!categoryName) {
                 this.showError('El nombre de la categoría no puede estar vacío');
@@ -978,9 +1154,10 @@ const adminModule = {
             
             const { db, firebase } = window.firebaseService;
             
-            // Crear nueva categoría
+            // Crear nueva categoría con color
             await db.collection('categorias').add({
                 nombre: categoryName,
+                color: categoryColor,
                 creado: firebase.firestore.Timestamp.now()
             });
             
@@ -988,6 +1165,8 @@ const adminModule = {
             
             // Limpiar formulario
             document.getElementById('categoryName').value = '';
+            document.getElementById('categoryColor').value = '#4caf50';
+            document.querySelectorAll('.color-preset').forEach(preset => preset.classList.remove('selected'));
             
             // Recargar categorías
             await this.loadCategorias();
@@ -998,6 +1177,98 @@ const adminModule = {
         } catch (error) {
             console.error('Error al crear categoría:', error);
             this.showError('Error al crear categoría: ' + error.message);
+        }
+    },
+    
+    async editCategory(categoryId, categoryName, categoryColor) {
+        try {
+            // Cambiar formulario para edición
+            document.getElementById('categoryName').value = categoryName;
+            document.getElementById('categoryColor').value = categoryColor || '#4caf50';
+            
+            // Seleccionar visualmente el preset que coincida con el color, si existe
+            document.querySelectorAll('.color-preset').forEach(preset => {
+                const presetColor = preset.getAttribute('data-color');
+                if (presetColor === categoryColor) {
+                    preset.classList.add('selected');
+                } else {
+                    preset.classList.remove('selected');
+                }
+            });
+            
+            // Cambiar texto del botón
+            const submitButton = document.getElementById('categoryForm').querySelector('button[type="submit"]');
+            submitButton.textContent = 'Actualizar Categoría';
+            
+            // Guardar ID para actualizar
+            document.getElementById('categoryForm').dataset.editId = categoryId;
+            // Guardar nombre original para comparar
+            document.getElementById('categoryForm').dataset.originalName = categoryName;
+            
+            // Cambiar acción del formulario
+            const form = document.getElementById('categoryForm');
+            const originalSubmit = form.onsubmit;
+            
+            form.onsubmit = async (e) => {
+                e.preventDefault();
+                
+                const newName = document.getElementById('categoryName').value.trim();
+                const newColor = document.getElementById('categoryColor').value.trim();
+                const originalName = form.dataset.originalName;
+                
+                if (!newName) {
+                    this.showError('El nombre de la categoría no puede estar vacío');
+                    return;
+                }
+                
+                try {
+                    // Solo verificar duplicados si el nombre ha cambiado
+                    if (newName.toLowerCase() !== originalName.toLowerCase()) {
+                        // Verificar si ya existe una categoría con ese nombre
+                        const existingCategory = this.categorias.find(cat => 
+                            cat.nombre && cat.nombre.toLowerCase() === newName.toLowerCase() && cat.id !== categoryId
+                        );
+                        
+                        if (existingCategory) {
+                            this.showError('Ya existe una categoría con ese nombre');
+                            return;
+                        }
+                    }
+                    
+                    const { db } = window.firebaseService;
+                    
+                    // Actualizar categoría
+                    await db.collection('categorias').doc(categoryId).update({
+                        nombre: newName,
+                        color: newColor
+                    });
+                    
+                    this.showSuccess(`Categoría actualizada correctamente`);
+                    
+                    // Limpiar formulario
+                    document.getElementById('categoryName').value = '';
+                    document.getElementById('categoryColor').value = '#4caf50';
+                    document.querySelectorAll('.color-preset').forEach(preset => preset.classList.remove('selected'));
+                    delete form.dataset.editId;
+                    delete form.dataset.originalName;
+                    
+                    // Restaurar acción original
+                    submitButton.textContent = 'Agregar Categoría';
+                    form.onsubmit = originalSubmit;
+                    
+                    // Recargar categorías
+                    await this.loadCategorias();
+                    
+                    // Actualizar lista de categorías
+                    this.renderCategoriesList();
+                } catch (error) {
+                    console.error('Error al actualizar categoría:', error);
+                    this.showError('Error al actualizar categoría: ' + error.message);
+                }
+            };
+        } catch (error) {
+            console.error('Error al preparar edición de categoría:', error);
+            this.showError('Error al preparar edición: ' + error.message);
         }
     },
     

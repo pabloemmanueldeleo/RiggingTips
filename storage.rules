@@ -7,23 +7,11 @@ service firebase.storage {
       return request.auth != null && 
         request.auth.token.email == 'pabloemmanueldeleo@gmail.com';
     }
-
-    // Reglas para imágenes
-    match /imagenes/{imageId} {
-      allow read: if true;  // Cualquiera puede ver las imágenes
-      allow write: if isAdmin();  // Solo administradores pueden subir
-    }
     
-    // Reglas para videos
-    match /videos/{videoId} {
-      allow read: if true;  // Cualquiera puede ver los videos
-      allow write: if isAdmin();  // Solo administradores pueden subir
-    }
-    
-    // Reglas para el resto de archivos
+    // Permitir lectura sin restricciones por CORS
     match /{allPaths=**} {
-      allow read: if true;  // Lectura pública
-      allow write: if isAdmin();  // Solo administradores pueden escribir
+      allow read;
+      allow write: if isAdmin();
     }
   }
 } 

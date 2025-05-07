@@ -27,11 +27,23 @@ const app = {
         const searchBtn = document.getElementById('searchBtn');
         
         if (searchInput && searchBtn) {
+            // Búsqueda al hacer clic en el botón
             searchBtn.addEventListener('click', () => this.performSearch(searchInput.value));
+            
+            // Búsqueda al presionar Enter
             searchInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
                     this.performSearch(searchInput.value);
                 }
+            });
+            
+            // Búsqueda a medida que se escribe (con delay)
+            let searchTimeout;
+            searchInput.addEventListener('input', (e) => {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    this.performSearch(e.target.value);
+                }, 500); // 500ms de delay para evitar muchas consultas
             });
         }
     },
@@ -45,6 +57,12 @@ const app = {
             const categoriasSnapshot = await db.collection('categorias').get();
             const categoriasBar = document.getElementById('categoriasBar');
             
+            // Guardar las categorías para uso posterior (colores)
+            this.categorias = categoriasSnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+            
             if (!categoriasSnapshot.empty) {
                 categoriasBar.innerHTML = `
                     <button class="categoria-btn active" data-categoria="todas">Todas</button>
@@ -56,6 +74,14 @@ const app = {
                         const categoriaBtn = document.createElement('button');
                         categoriaBtn.className = 'categoria-btn';
                         categoriaBtn.setAttribute('data-categoria', categoria.nombre);
+                        
+                        // Aplicar estilo de color si existe
+                        if (categoria.color) {
+                            categoriaBtn.style.backgroundColor = `${categoria.color}40`; // Versión transparente
+                            categoriaBtn.style.borderColor = categoria.color;
+                            categoriaBtn.style.color = this.getContrastColor(categoria.color);
+                        }
+                        
                         categoriaBtn.textContent = categoria.nombre;
                         categoriaBtn.addEventListener('click', () => this.filtrarPorCategoria(categoria.nombre));
                         categoriasBar.appendChild(categoriaBtn);
@@ -215,6 +241,15 @@ const app = {
         const descripcion = nodo.descripcion || 'Sin descripción';
         const categoria = nodo.categoria || 'Sin categoría';
         
+        // Obtener color de la categoría
+        let categoriaColor = '#4caf50'; // Color por defecto
+        
+        // Buscar la categoría en la lista de categorías
+        const categoriaObj = this.categorias.find(cat => cat.nombre === categoria);
+        if (categoriaObj && categoriaObj.color) {
+            categoriaColor = categoriaObj.color;
+        }
+        
         // Preparar contenido multimedia
         let mediaHTML = '';
         if (nodo.imagen) {
@@ -231,7 +266,10 @@ const app = {
             <h3>${titulo}</h3>
             <p>${descripcion}</p>
             <div class="nodo-footer">
-                <span class="categoria">${categoria}</span>
+                <span class="categoria" style="background-color: ${categoriaColor}80; color: ${this.getContrastColor(categoriaColor)}">
+                    <span class="categoria-color-indicator" style="background-color: ${categoriaColor}"></span>
+                    ${categoria}
+                </span>
             </div>
         `;
         nodosGrid.appendChild(nodoElement);
@@ -242,6 +280,20 @@ const app = {
         });
         
         console.log(`Nodo renderizado: ${id} - ${titulo}`);
+    },
+
+    // Función de utilidad para determinar el color de texto según el fondo
+    getContrastColor(hexColor) {
+        // Convertir hex a RGB
+        const r = parseInt(hexColor.substr(1, 2), 16);
+        const g = parseInt(hexColor.substr(3, 2), 16);
+        const b = parseInt(hexColor.substr(5, 2), 16);
+        
+        // Calcular luminosidad
+        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        
+        // Retornar negro o blanco según luminosidad
+        return luminance > 0.5 ? '#000000' : '#ffffff';
     },
 
     async verDetalles(id) {
