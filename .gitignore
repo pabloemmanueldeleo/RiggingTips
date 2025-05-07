@@ -1,20 +1,28 @@
 # Dependencies
 node_modules/
-npm-debug.log
-yarn-debug.log
-yarn-error.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
 
 # Firebase
 .firebase/
-serviceAccountKey.json
-.firebaserc
 firebase-debug.log
+serviceAccountKey.json
 .runtimeconfig.json
+ui-debug.log
+firebase-adminsdk-*.json
+firebase-export-*.json
+database-*.json
+firestore-*.json
 
-# Environment
+# Environment variables
 .env
+.env.*
 .env.local
-.env.*.local
+.env.development
+.env.production
+*.env
 
 # Build
 dist/
@@ -26,15 +34,22 @@ build/
 .vscode/
 *.swp
 *.swo
+*.sublime*
+.project
+.settings/
 
 # OS
 .DS_Store
 Thumbs.db
+desktop.ini
+*.lnk
 
 # Backup
 backup/
 *.bak
 *.backup
+*_backup_*.json
+*-backup.*
 
 # Private/Sensitive Data
 **/private/
@@ -42,3 +57,25 @@ backup/
 **/*.key
 **/*.pem
 **/*-key.*
+**/credentials/
+**/*secret*
+**/*password*
+**/*token*
+
+# Firestore exports
+riggingtips-default-rtdb-export.json
+*-export.json
+*-import.json
+*export*.json
+*import*.json
+
+# Temporary files
+*.tmp
+.temp/
+tmp/
+temp/
+
+# Cache
+.cache/
+.firebase/
+.firebaserc

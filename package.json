@@ -8,7 +8,8 @@
     "deploy": "firebase deploy"
   },
   "dependencies": {
-    "firebase": "^10.8.0",
+    "dotenv": "^16.5.0",
+    "firebase": "^10.14.1",
     "firebase-admin": "^13.3.0"
   },
   "devDependencies": {

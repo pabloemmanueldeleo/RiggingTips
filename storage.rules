@@ -10,13 +10,13 @@ service firebase.storage {
 
     // Reglas para imágenes
     match /imagenes/{imageId} {
-      allow read;  // Cualquiera puede ver las imágenes
+      allow read: if true;  // Cualquiera puede ver las imágenes
       allow write: if isAdmin();  // Solo administradores pueden subir
     }
     
     // Reglas para videos
     match /videos/{videoId} {
-      allow read;  // Cualquiera puede ver los videos
+      allow read: if true;  // Cualquiera puede ver los videos
       allow write: if isAdmin();  // Solo administradores pueden subir
     }
     

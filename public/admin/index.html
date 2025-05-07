@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="referrer" content="no-referrer-when-downgrade">
     <title>RiggingTips - Panel de Administración</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/admin.css">
     
     <!-- Firebase SDK -->
@@ -15,16 +16,11 @@
     
     <!-- Configuración de Firebase -->
     <script src="../js/firebase-config.js"></script>
-    
-    <!-- Módulos de la aplicación -->
-    <script type="module" src="js/modules/auth.js"></script>
-    <script type="module" src="js/modules/ui.js"></script>
-    <script type="module" src="js/modules/data.js"></script>
-    <script type="module" src="js/admin.js"></script>
 </head>
 <body>
     <div id="errorContainer"></div>
     
+    <!-- Pantalla de inicio de sesión -->
     <div id="loginContainer" class="container">
         <h1>RiggingTips - Panel de Administración</h1>
         <div id="loginForm">
@@ -34,68 +30,141 @@
         </div>
     </div>
 
+    <!-- Panel de administración -->
     <div id="adminPanel" class="container hidden">
         <header>
             <h1>Panel de Administración</h1>
-            <button id="logoutButton" class="btn-secondary">Cerrar sesión</button>
+            <div class="header-actions">
+                <button id="resetDatabaseButton" class="btn-danger">Reiniciar Base de Datos</button>
+                <button id="logoutButton" class="btn-secondary">Cerrar sesión</button>
+            </div>
         </header>
-
+        
         <div class="admin-controls">
             <div class="search-bar">
                 <input type="text" id="searchInput" placeholder="Buscar tips..." class="form-control">
             </div>
             <div id="categoriasBar" class="categorias-bar"></div>
-            <button id="newTipButton" class="btn-primary">Nuevo Tip</button>
+            <div class="buttons-container">
+                <button id="newTipButton" class="btn-primary">Nuevo Tip</button>
+                <button id="manageCategoriesButton" class="btn-secondary">Gestionar Categorías</button>
+            </div>
         </div>
 
         <div id="tipsList" class="tips-grid"></div>
+        
+        <!-- Modal para gestionar categorías -->
+        <div id="categoriesModal" class="modal hidden">
+            <div class="modal-content">
+                <h2>Gestionar Categorías</h2>
+                <button id="closeCategoriesModalButton" class="close-btn">&times;</button>
+                
+                <div class="categories-container">
+                    <div class="categories-list-container">
+                        <h3>Categorías existentes</h3>
+                        <ul id="categoriesList" class="categories-list"></ul>
+                    </div>
+                    
+                    <form id="categoryForm" class="category-form">
+                        <div class="form-group">
+                            <label for="categoryName">Nueva Categoría</label>
+                            <input type="text" id="categoryName" placeholder="Nombre de la categoría" required>
+                        </div>
+                        <button type="submit" class="btn-primary">Agregar Categoría</button>
+                    </form>
+                </div>
+            </div>
+        </div>
 
         <!-- Modal para crear/editar tips -->
         <div id="tipModal" class="modal hidden">
             <div class="modal-content">
                 <h2 id="modalTitle">Nuevo Tip</h2>
-                <form id="tipForm">
+                <button id="closeModalButton" class="close-btn">&times;</button>
+                
+                <form id="tipForm" enctype="multipart/form-data">
                     <div class="form-group">
                         <label for="titulo">Título</label>
                         <input type="text" id="titulo" required>
                     </div>
+                    
                     <div class="form-group">
                         <label for="descripcion">Descripción</label>
                         <textarea id="descripcion" required></textarea>
                     </div>
+                    
                     <div class="form-group">
                         <label for="categoria">Categoría</label>
-                        <select id="categoria" required>
-                            <option value="programacion">Programación</option>
-                            <option value="bolsa">Bolsa de Trabajo</option>
-                            <option value="rigging">Rigging</option>
-                            <option value="errores">Errores</option>
-                            <option value="matematicas">Matemáticas</option>
-                            <option value="nodos">Nodos</option>
-                            <option value="pipeline">Pipeline</option>
-                        </select>
+                        <select id="categoria" required></select>
                     </div>
+                    
                     <div class="form-group">
-                        <label for="imagen">Imagen</label>
-                        <input type="file" id="imagen" accept="image/*">
+                        <label for="contenido">Contenido Detallado</label>
+                        <textarea id="contenido" rows="6"></textarea>
                     </div>
+                    
                     <div class="form-group">
-                        <label for="video">Video</label>
-                        <input type="file" id="video" accept="video/*">
+                        <label>Imagen</label>
+                        <div class="file-input-group">
+                            <input type="file" id="imagenFile" accept="image/*" onchange="previewImage(this)">
+                            <p class="texto-o">o</p>
+                            <input type="text" id="imagen" placeholder="URL de imagen (https://...)" onchange="previewImageFromUrl(this.value)">
+                            <button type="button" id="browseStorageBtn" class="btn-secondary">Explorar imágenes en Storage</button>
+                        </div>
+                        <div id="imagePreview" class="image-preview"></div>
+                        <div id="storedImagesPreview" class="stored-images hidden">
+                            <h4>Imágenes disponibles en Storage</h4>
+                            <div id="imageGrid" class="image-grid"></div>
+                        </div>
                     </div>
+                    
                     <div class="form-group">
-                        <label>
-                            <input type="checkbox" id="publico" checked>
-                            Público
-                        </label>
+                        <label>Video (opcional)</label>
+                        <div class="file-input-group">
+                            <input type="file" id="videoFile" accept="video/*">
+                            <p class="texto-o">o</p>
+                            <input type="text" id="video" placeholder="URL de video (https://...)">
+                            <button type="button" id="browseVideosBtn" class="btn-secondary">Explorar videos en Storage</button>
+                        </div>
+                        <div id="storedVideosPreview" class="stored-images hidden">
+                            <h4>Videos disponibles en Storage</h4>
+                            <div id="videoGrid" class="image-grid"></div>
+                        </div>
                     </div>
-                    <div class="form-actions">
+                    
+                    <div class="form-group checkbox-group">
+                        <input type="checkbox" id="publico" checked>
+                        <label for="publico">Publicado</label>
+                    </div>
+                    
+                    <div class="form-buttons">
+                        <button type="button" id="cancelButton" class="btn-secondary">Cancelar</button>
                         <button type="submit" class="btn-primary">Guardar</button>
-                        <button type="button" class="btn-secondary" onclick="closeModal()">Cancelar</button>
                     </div>
                 </form>
             </div>
         </div>
+        
+        <!-- Modal de confirmación para reinicio de BD -->
+        <div id="confirmModal" class="modal hidden">
+            <div class="modal-content confirm-content">
+                <h2>Confirmar reinicio de base de datos</h2>
+                <p>Esta acción eliminará todos los datos actuales y los reemplazará con datos de ejemplo. Esta operación no se puede deshacer.</p>
+                <div class="form-buttons">
+                    <button id="cancelResetButton" class="btn-secondary">Cancelar</button>
+                    <button id="confirmResetButton" class="btn-danger">Sí, reiniciar base de datos</button>
+                </div>
+            </div>
+        </div>
     </div>
+    
+    <!-- Scripts de utilidades -->
+    <script src="../js/database-seed.js"></script>
+    
+    <!-- Módulos de la aplicación -->
+    <script type="module" src="js/modules/auth.js"></script>
+    <script type="module" src="js/modules/ui.js"></script>
+    <script type="module" src="js/modules/data.js"></script>
+    <script type="module" src="js/admin.js"></script>
 </body>
 </html> 

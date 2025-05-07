@@ -118,18 +118,47 @@ export const ui = {
         `;
     },
 
-    showError(message) {
-        const errorContainer = document.getElementById('errorContainer');
-        errorContainer.innerHTML = `
-            <div class="error-message">
-                ${message}
-                <br>
-                <small>Por favor, contacta al administrador</small>
-            </div>
-        `;
+    showSuccess(message, duration = 5000) {
+        this.showMessage(message, 'success', duration);
+    },
+    
+    showError(message, duration = 5000) {
+        this.showMessage(message, 'error', duration);
+    },
+    
+    showMessage(message, type, duration) {
+        const container = document.getElementById('errorContainer');
+        if (!container) return;
+        
+        const msgElement = document.createElement('div');
+        msgElement.className = type === 'error' ? 'error-message' : 'success-message';
+        msgElement.textContent = message;
+        
+        container.appendChild(msgElement);
         
         setTimeout(() => {
-            errorContainer.innerHTML = '';
-        }, 5000);
+            if (msgElement.parentNode) {
+                msgElement.parentNode.removeChild(msgElement);
+            }
+        }, duration);
+    },
+    
+    createLoadingIndicator() {
+        const loadingElement = document.createElement('div');
+        loadingElement.className = 'loading-indicator';
+        loadingElement.innerHTML = '<div class="spinner"></div><p>Cargando...</p>';
+        return loadingElement;
+    },
+    
+    showLoading(container) {
+        const loading = this.createLoadingIndicator();
+        container.appendChild(loading);
+        return loading;
+    },
+    
+    hideLoading(loadingElement) {
+        if (loadingElement && loadingElement.parentNode) {
+            loadingElement.parentNode.removeChild(loadingElement);
+        }
     }
 }; 

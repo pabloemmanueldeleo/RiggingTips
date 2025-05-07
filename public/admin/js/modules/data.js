@@ -57,54 +57,86 @@ export const data = {
 
     async getCategorias() {
         try {
-            const snapshot = await this.db.collection('categorias').get();
-            return snapshot.docs.map(doc => doc.data().nombre);
+            const db = window.firebaseService.db;
+            const snapshot = await db.collection('categorias').get();
+            
+            return snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
         } catch (error) {
             console.error('Error al obtener categorías:', error);
             throw error;
         }
     },
 
-    async getTips() {
+    async getTips(categoria = null) {
         try {
-            const db = window.firebaseService.getDb();
-            const snapshot = await db.collection('nodos').get();
+            const db = window.firebaseService.db;
+            let query = db.collection('nodos');
+            
+            if (categoria) {
+                query = query.where('categoria', '==', categoria);
+            }
+            
+            const snapshot = await query.get();
+            
             return snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
             }));
         } catch (error) {
-            console.error('Error al cargar tips:', error);
+            console.error('Error al obtener tips:', error);
+            throw error;
+        }
+    },
+
+    async buscarTips(termino) {
+        try {
+            const db = window.firebaseService.db;
+            const snapshot = await db.collection('nodos').get();
+            
+            const terminos = termino.toLowerCase().split(' ');
+            
+            return snapshot.docs
+                .map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }))
+                .filter(tip => {
+                    const titulo = (tip.titulo || '').toLowerCase();
+                    const descripcion = (tip.descripcion || '').toLowerCase();
+                    const contenido = (tip.contenido || '').toLowerCase();
+                    
+                    return terminos.some(t => 
+                        titulo.includes(t) || 
+                        descripcion.includes(t) || 
+                        contenido.includes(t)
+                    );
+                });
+        } catch (error) {
+            console.error('Error al buscar tips:', error);
             throw error;
         }
     },
 
     async saveTip(tipData, tipId = null) {
         try {
-            const db = window.firebaseService.getDb();
-            const storage = window.firebaseService.getStorage();
-            const formData = { ...tipData };
-
-            // Manejar archivos si existen
-            if (formData.imagenFile) {
-                formData.imagen = await this.uploadFile(storage, formData.imagenFile, 'imagenes');
-                delete formData.imagenFile;
-            }
+            const db = window.firebaseService.db;
+            const firebase = window.firebaseService.firebase;
             
-            if (formData.videoFile) {
-                formData.video = await this.uploadFile(storage, formData.videoFile, 'videos');
-                delete formData.videoFile;
-            }
-
-            // Actualizar fechas
-            formData.fechaActualizacion = new Date();
+            const timestamp = firebase.firestore.Timestamp.now();
+            const data = {
+                ...tipData,
+                actualizado: timestamp
+            };
             
             if (tipId) {
-                await db.collection('nodos').doc(tipId).update(formData);
+                await db.collection('nodos').doc(tipId).update(data);
                 return tipId;
             } else {
-                formData.fechaCreacion = new Date();
-                const docRef = await db.collection('nodos').add(formData);
+                data.creado = timestamp;
+                const docRef = await db.collection('nodos').add(data);
                 return docRef.id;
             }
         } catch (error) {
@@ -115,7 +147,7 @@ export const data = {
 
     async deleteTip(tipId) {
         try {
-            const db = window.firebaseService.getDb();
+            const db = window.firebaseService.db;
             await db.collection('nodos').doc(tipId).delete();
         } catch (error) {
             console.error('Error al eliminar tip:', error);
@@ -123,11 +155,17 @@ export const data = {
         }
     },
 
-    async uploadFile(storage, file, folder) {
-        const extension = file.name.split('.').pop();
-        const filename = `${Date.now()}.${extension}`;
-        const ref = storage.ref(`${folder}/${filename}`);
-        await ref.put(file);
-        return await ref.getDownloadURL();
+    async uploadFile(file, path) {
+        try {
+            const storage = window.firebaseService.storage;
+            const timestamp = Date.now();
+            const fileRef = storage.ref().child(`${path}/${timestamp}_${file.name}`);
+            
+            await fileRef.put(file);
+            return await fileRef.getDownloadURL();
+        } catch (error) {
+            console.error('Error al subir archivo:', error);
+            throw error;
+        }
     }
 }; 

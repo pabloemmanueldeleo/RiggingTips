@@ -2,13 +2,17 @@
 export const auth = {
     currentUser: null,
     
+    // Inicializar el módulo de autenticación
     async init() {
         return new Promise((resolve) => {
             const checkFirebase = () => {
                 if (window.firebaseService && window.firebaseService.initialized) {
-                    const auth = window.firebaseService.getAuth();
+                    const auth = window.firebaseService.auth;
+                    
+                    // Escuchar cambios en el estado de autenticación
                     auth.onAuthStateChanged(user => {
                         this.currentUser = user;
+                        console.log('Estado de autenticación cambiado:', user ? user.email : 'No autenticado');
                         resolve(user);
                     });
                 } else {
@@ -19,9 +23,11 @@ export const auth = {
         });
     },
 
+    // Iniciar sesión con Google
     async loginWithGoogle() {
         try {
-            const auth = window.firebaseService.getAuth();
+            const auth = window.firebaseService.auth;
+            const firebase = window.firebaseService.firebase;
             const provider = new firebase.auth.GoogleAuthProvider();
             const result = await auth.signInWithPopup(provider);
             return result.user;
@@ -31,9 +37,10 @@ export const auth = {
         }
     },
 
+    // Cerrar sesión
     async logout() {
         try {
-            const auth = window.firebaseService.getAuth();
+            const auth = window.firebaseService.auth;
             await auth.signOut();
         } catch (error) {
             console.error('Error al cerrar sesión:', error);
@@ -55,7 +62,10 @@ export const auth = {
         document.getElementById('userInfo').textContent = '';
     },
 
+    // Verificar si el usuario es administrador
     isAdmin(user) {
-        return user && user.email === 'pabloemmanueldeleo@gmail.com';
+        // Aquí se puede implementar la lógica para verificar si un usuario es administrador
+        // Por ahora, cualquier usuario autenticado es administrador
+        return !!user;
     }
 }; 

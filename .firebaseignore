@@ -1,1 +1,64 @@
-serviceAccountKey.json 
+# Archivos sensibles que no deben desplegarse
+serviceAccountKey.json
+firebase-adminsdk-*.json
+.env
+.env.*
+*.env
+*.key
+*-key.*
+*.pem
+**/*secret*
+**/*password*
+**/*token*
+**/private/
+**/secrets/
+**/credentials/
+
+# Directorios de desarrollo
+node_modules/
+backup/
+.github/
+.git/
+.vscode/
+.idea/
+tests/
+test/
+__tests__/
+coverage/
+
+# Logs y archivos temporales
+*.log
+firebase-debug.log
+ui-debug.log
+npm-debug.log
+yarn-error.log
+*.tmp
+.temp/
+tmp/
+temp/
+
+# Archivos de proyecto específicos
+package-lock.json
+yarn.lock
+.firebaserc
+.gitignore
+README.md
+LICENSE
+*.md
+.editorconfig
+.eslintrc*
+.prettierrc*
+
+# Archivos de exportación/importación
+riggingtips-default-rtdb-export.json
+*-export.json
+*-import.json
+*export*.json
+*import*.json
+importar_*.js
+
+# Archivos de respaldo
+*.bak
+*.backup
+*_backup_*.json
+*-backup.* 

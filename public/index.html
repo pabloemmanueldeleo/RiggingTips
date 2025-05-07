@@ -6,26 +6,7 @@
     <title>RiggingTips</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/styles.css">
-</head>
-<body>
-    <header class="top-bar">
-        <h1>RiggingTips</h1>
-    </header>
-
-    <main class="container">
-        <div class="search-container">
-            <input type="text" id="searchInput" class="form-control" placeholder="Buscar tips...">
-            <button class="btn btn-primary" id="searchBtn">Buscar</button>
-        </div>
-
-        <div id="categoriasBar" class="categorias-bar"></div>
-        <div id="nodosGrid" class="grid"></div>
-    </main>
-
-    <footer class="footer">
-        <p>Hecho con ❤️ por Pablo Emmanuel De Leo — <span style="font-size:0.95em;">Comparte este recurso en tu comunidad o webinar, ¡es gratis!</span></p>
-    </footer>
-
+    
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -34,10 +15,36 @@
 
     <!-- Configuración de Firebase -->
     <script src="js/firebase-config.js"></script>
+</head>
+<body>
+    <header class="top-bar">
+        <h1>RiggingTips</h1>
+        <nav class="nav-links">
+            <a href="/admin" class="admin-link">Panel Admin</a>
+        </nav>
+    </header>
 
-    <!-- App Scripts -->
-    <script src="js/modules/categorias.js"></script>
-    <script src="js/modules/nodos.js"></script>
+    <main class="container">
+        <div class="search-container">
+            <input type="text" id="searchInput" class="search-input" placeholder="Buscar tips...">
+            <button id="searchBtn" class="search-button">Buscar</button>
+        </div>
+
+        <div id="categoriasBar" class="categorias-bar"></div>
+        <div id="nodosGrid" class="nodos-grid"></div>
+    </main>
+
+    <footer class="footer">
+        <p>Hecho con ❤️ por Pablo Emmanuel De Leo — <span>Comparte este recurso en tu comunidad o webinar, ¡es gratis!</span></p>
+    </footer>
+
+    <!-- Scripts de utilidades -->
+    <script src="js/database-seed.js"></script>
+    <script src="js/init-data.js"></script>
+
+    <!-- Módulos de la aplicación -->
+    <script src="js/categorias.js"></script>
+    <script src="js/nodos.js"></script>
     <script src="js/modules/app.js"></script>
 </body>
 </html> 
