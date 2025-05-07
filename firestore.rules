@@ -4,20 +4,47 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // Función para verificar si el usuario es administrador
     function isAdmin() {
-      return request.auth != null && 
-        request.auth.token.email == 'pabloemmanueldeleo@gmail.com';
+      return request.auth != null && exists(/databases/$(database)/documents/correosAutorizados/$(request.auth.token.email));
+    }
+
+    // Validación de datos para nodos
+    function isValidNodo() {
+      let requiredFields = ['titulo', 'descripcion', 'categoria'];
+      let data = request.resource.data;
+      return data.keys().hasAll(requiredFields) &&
+             data.titulo is string && data.titulo.size() > 0 &&
+             data.descripcion is string &&
+             data.categoria is string;
+    }
+
+    // Validación de datos para categorías
+    function isValidCategoria() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['nombre', 'color']) &&
+             data.nombre is string && data.nombre.size() > 0 &&
+             data.color is string && data.color.matches('^#[0-9A-Fa-f]{6}$');
+    }
+
+    // Reglas para la colección de correosAutorizados
+    match /correosAutorizados/{email} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
     }
 
     // Reglas para la colección de nodos
     match /nodos/{document=**} {
       allow read: if true;  // Lectura pública
-      allow write: if isAdmin();  // Solo administradores pueden escribir
+      allow create: if isAdmin() && isValidNodo();
+      allow update: if isAdmin() && isValidNodo();
+      allow delete: if isAdmin();
     }
 
     // Reglas para la colección de categorías
     match /categorias/{document=**} {
       allow read: if true;  // Lectura pública
-      allow write: if isAdmin();  // Solo administradores pueden escribir
+      allow create: if isAdmin() && isValidCategoria();
+      allow update: if isAdmin() && isValidCategoria();
+      allow delete: if isAdmin();
     }
   }
 } 

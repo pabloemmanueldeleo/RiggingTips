@@ -5,14 +5,29 @@ const nodosModule = {
     searchInput: null,
     searchBtn: null,
     currentFilter: '',
+    categorias: [],
 
     init() {
         this.db = firebase.firestore();
         this.nodosGrid = document.getElementById('nodosGrid');
         this.searchInput = document.getElementById('searchInput');
         this.searchBtn = document.getElementById('searchBtn');
+        this.loadCategorias();
         this.setupEventListeners();
         this.loadNodos();
+    },
+    
+    async loadCategorias() {
+        try {
+            const snapshot = await this.db.collection('categorias').get();
+            this.categorias = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+        } catch (error) {
+            console.error('Error al cargar categorías:', error);
+            this.categorias = [];
+        }
     },
 
     setupEventListeners() {
@@ -45,7 +60,7 @@ const nodosModule = {
                     categoria: data.categoria || 'Sin categoría',
                     imagen: data.imagen || (data.media && data.media.principal) || '',
                     video: data.video || (data.media && data.media.video) || '',
-                    rigging: data.rigging || '',
+                    contenido: data.contenido || '',
                     url: data.url || ''
                 };
             });
@@ -75,7 +90,7 @@ const nodosModule = {
                     categoria: data.categoria || 'Sin categoría',
                     imagen: data.imagen || (data.media && data.media.principal) || '',
                     video: data.video || (data.media && data.media.video) || '',
-                    rigging: data.rigging || '',
+                    contenido: data.contenido || '',
                     url: data.url || ''
                 };
             }).filter(nodo => 
@@ -95,6 +110,11 @@ const nodosModule = {
             console.error('Error en la búsqueda:', error);
         }
     },
+    
+    getCategoryColor(categoria) {
+        const cat = this.categorias.find(c => c.nombre === categoria);
+        return cat ? cat.color : '#666';
+    },
 
     renderNodos(nodos) {
         if (!this.nodosGrid) return;
@@ -104,24 +124,31 @@ const nodosModule = {
             return;
         }
 
-        this.nodosGrid.innerHTML = nodos.map(nodo => `
-            <div class="card" data-id="${nodo.id}">
-                ${nodo.imagen ? `
-                    <div class="card-media">
-                        <img src="${nodo.imagen}" alt="${nodo.titulo}" loading="lazy">
-                        ${nodo.video ? '<span class="video-indicator">▶</span>' : ''}
-                    </div>
-                ` : ''}
-                <div class="card-content">
-                    <h3>${nodo.titulo}</h3>
-                    <p>${nodo.descripcion}</p>
-                    <div class="card-footer">
-                        <span class="categoria-tag">${nodo.categoria}</span>
-                        ${nodo.url ? `<a href="${nodo.url}" target="_blank" class="btn-link">Ver más</a>` : ''}
+        this.nodosGrid.innerHTML = nodos.map(nodo => {
+            const categoriaColor = this.getCategoryColor(nodo.categoria);
+            
+            return `
+                <div class="card" data-id="${nodo.id}">
+                    ${nodo.imagen ? `
+                        <div class="card-media">
+                            <img src="${nodo.imagen}" alt="${nodo.titulo}" loading="lazy" onerror="this.src='https://placehold.co/600x400?text=Imagen+no+disponible'">
+                            ${nodo.video ? '<span class="video-indicator">▶</span>' : ''}
+                        </div>
+                    ` : ''}
+                    <div class="card-content">
+                        <h3>${nodo.titulo}</h3>
+                        <p>${nodo.descripcion}</p>
+                        <div class="card-footer">
+                            <span class="categoria-tag" style="background-color: ${categoriaColor}20; color: ${categoriaColor}; border: 1px solid ${categoriaColor};">
+                                <span class="categoria-color-indicator" style="background-color: ${categoriaColor};"></span>
+                                ${nodo.categoria}
+                            </span>
+                            ${nodo.url ? `<a href="${nodo.url}" target="_blank" class="btn-link">Ver más</a>` : ''}
+                        </div>
                     </div>
                 </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
 
         // Agregar evento click a las cards
         this.nodosGrid.querySelectorAll('.card').forEach(card => {
@@ -140,6 +167,8 @@ const nodosModule = {
         const modal = document.createElement('div');
         modal.className = 'modal';
         
+        const categoriaColor = this.getCategoryColor(nodo.categoria);
+        
         let mediaHtml = '';
         if (nodo.video) {
             mediaHtml = `<video src="${nodo.video}" controls></video>`;
@@ -152,8 +181,14 @@ const nodosModule = {
             ${mediaHtml}
             <h3>${nodo.titulo}</h3>
             <p>${nodo.descripcion}</p>
-            ${nodo.rigging ? `<pre><code>${nodo.rigging}</code></pre>` : ''}
-            ${nodo.url ? `<a href="${nodo.url}" target="_blank" class="btn-primary">Ver recurso completo</a>` : ''}
+            ${nodo.contenido ? `<div class="contenido">${nodo.contenido}</div>` : ''}
+            <div class="modal-footer">
+                <span class="categoria-tag" style="background-color: ${categoriaColor}20; color: ${categoriaColor}; border: 1px solid ${categoriaColor};">
+                    <span class="categoria-color-indicator" style="background-color: ${categoriaColor};"></span>
+                    ${nodo.categoria}
+                </span>
+                ${nodo.url ? `<a href="${nodo.url}" target="_blank" class="btn-primary">Ver recurso completo</a>` : ''}
+            </div>
         `;
 
         modalBg.appendChild(modal);

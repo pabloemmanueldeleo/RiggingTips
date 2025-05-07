@@ -524,13 +524,17 @@ header {
     margin-top: 2rem;
 }
 
-/* Mensajes */
+/* Mensajes de error y estado */
 #errorContainer {
     position: fixed;
-    top: 1rem;
-    right: 1rem;
-    max-width: 350px;
-    z-index: 1100;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    max-width: 80%;
+    display: none;
+    flex-direction: column;
+    gap: 10px;
 }
 
 .error-message {
@@ -541,6 +545,12 @@ header {
     margin-bottom: 0.5rem;
     box-shadow: var(--elevation-2);
     animation: fadeIn 0.3s ease-out forwards;
+}
+
+.status-message {
+    background-color: #e8f5e9;
+    border-left: 4px solid #4caf50;
+    color: #2e7d32;
 }
 
 .success-message {

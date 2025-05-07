@@ -17,54 +17,53 @@ const adminModule = {
     // Inicialización
     async init() {
         // Esperar a que Firebase esté inicializado
-        if (!window.firebaseService) {
+        if (!window.firebaseService || !window.firebaseService.initialized) {
+            console.log('Esperando inicialización de Firebase...');
             setTimeout(() => this.init(), 100);
             return;
         }
         
         console.log('Inicializando panel de administración...');
         
-        // Referencias a servicios de Firebase
-        const { auth, db } = window.firebaseService;
-        
         // Definir funciones globales para vista previa de imágenes
-        window.previewImage = (input) => this.previewImage(input);
-        window.previewImageFromUrl = (url) => this.previewImageFromUrl(url);
-        window.removeImagePreview = () => this.removeImagePreview();
-        
+        window.adminModule = this; // Exponer el módulo globalmente
+
         // Añadir listeners a botones
-        document.getElementById('loginButton').addEventListener('click', () => this.login());
-        document.getElementById('logoutButton').addEventListener('click', () => this.logout());
-        document.getElementById('newTipButton').addEventListener('click', () => this.showTipForm());
-        document.getElementById('closeModalButton').addEventListener('click', () => this.hideModal());
-        document.getElementById('cancelButton').addEventListener('click', () => this.hideModal());
-        document.getElementById('tipForm').addEventListener('submit', (e) => this.saveTip(e));
+        document.getElementById('loginButton')?.addEventListener('click', () => this.login());
+        document.getElementById('logoutButton')?.addEventListener('click', () => this.logout());
+        document.getElementById('newTipButton')?.addEventListener('click', () => this.showTipForm());
+        document.getElementById('closeModalButton')?.addEventListener('click', () => this.hideModal());
+        document.getElementById('cancelButton')?.addEventListener('click', () => this.hideModal());
+        document.getElementById('tipForm')?.addEventListener('submit', (e) => this.saveTip(e));
         
         // Buscar a medida que se escribe con un pequeño retraso
         const searchInput = document.getElementById('searchInput');
-        let searchTimeout;
-        searchInput.addEventListener('input', (e) => {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                this.handleSearch(e.target.value);
-            }, 300); // 300ms de delay para evitar muchas consultas
-        });
+        if (searchInput) {
+            let searchTimeout;
+            searchInput.addEventListener('input', (e) => {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    this.handleSearch(e.target.value);
+                }, 300); // 300ms de delay para evitar muchas consultas
+            });
+        }
         
         // Botones para gestión de categorías
-        document.getElementById('manageCategoriesButton').addEventListener('click', () => this.showCategoriesModal());
-        document.getElementById('closeCategoriesModalButton').addEventListener('click', () => this.hideCategoriesModal());
-        document.getElementById('categoryForm').addEventListener('submit', (e) => this.addCategory(e));
+        document.getElementById('manageCategoriesButton')?.addEventListener('click', () => this.showCategoriesModal());
+        document.getElementById('closeCategoriesModalButton')?.addEventListener('click', () => this.hideCategoriesModal());
+        document.getElementById('categoryForm')?.addEventListener('submit', (e) => this.addCategory(e));
         
         // Botones para reinicio de base de datos
-        document.getElementById('resetDatabaseButton').addEventListener('click', () => this.showConfirmReset());
-        document.getElementById('cancelResetButton').addEventListener('click', () => this.hideConfirmModal());
-        document.getElementById('confirmResetButton').addEventListener('click', () => this.resetDatabase());
+        document.getElementById('resetDatabaseButton')?.addEventListener('click', () => this.showConfirmReset());
+        document.getElementById('cancelResetButton')?.addEventListener('click', () => this.hideConfirmModal());
+        document.getElementById('confirmResetButton')?.addEventListener('click', () => this.resetDatabase());
         
         // Botones para explorar imágenes/videos en Storage
-        document.getElementById('browseStorageBtn').addEventListener('click', () => this.toggleStoredImagesPreview());
-        document.getElementById('browseVideosBtn').addEventListener('click', () => this.toggleStoredVideosPreview());
+        document.getElementById('browseStorageBtn')?.addEventListener('click', () => this.toggleStoredImagesPreview());
+        document.getElementById('browseVideosBtn')?.addEventListener('click', () => this.toggleStoredVideosPreview());
         
         // Comprobar autenticación
+        const { auth } = window.firebaseService;
         auth.onAuthStateChanged(async (user) => {
             this.user = user;
             if (user) {
@@ -149,6 +148,9 @@ const adminModule = {
     
     showError(message) {
         const errorContainer = document.getElementById('errorContainer');
+        if (!errorContainer) return;
+        
+        errorContainer.style.display = 'block';
         const errorDiv = document.createElement('div');
         errorDiv.className = 'error-message';
         errorDiv.textContent = message;
@@ -159,11 +161,19 @@ const adminModule = {
             if (errorDiv.parentNode) {
                 errorDiv.parentNode.removeChild(errorDiv);
             }
+            
+            // Si no hay más mensajes, ocultar el contenedor
+            if (errorContainer.children.length === 0) {
+                errorContainer.style.display = 'none';
+            }
         }, 5000);
     },
     
     showSuccess(message) {
         const errorContainer = document.getElementById('errorContainer');
+        if (!errorContainer) return;
+        
+        errorContainer.style.display = 'block';
         const successDiv = document.createElement('div');
         successDiv.className = 'success-message';
         successDiv.textContent = message;
@@ -173,6 +183,11 @@ const adminModule = {
         setTimeout(() => {
             if (successDiv.parentNode) {
                 successDiv.parentNode.removeChild(successDiv);
+            }
+            
+            // Si no hay más mensajes, ocultar el contenedor
+            if (errorContainer.children.length === 0) {
+                errorContainer.style.display = 'none';
             }
         }, 5000);
     },
@@ -1118,7 +1133,7 @@ const adminModule = {
                 imagePreview.innerHTML = `
                     <div class="preview-container">
                         <img src="${e.target.result}" alt="Vista previa">
-                        <button type="button" class="remove-preview" onclick="removeImagePreview()">×</button>
+                        <button type="button" class="remove-preview" onclick="adminModule.removeImagePreview()">×</button>
                     </div>
                     <p class="preview-filename">${input.files[0].name}</p>
                 `;
@@ -1138,7 +1153,7 @@ const adminModule = {
         imagePreview.innerHTML = `
             <div class="preview-container">
                 <img src="${url}" alt="Vista previa" onerror="this.src='https://placehold.co/600x400?text=Error+de+imagen'">
-                <button type="button" class="remove-preview" onclick="removeImagePreview()">×</button>
+                <button type="button" class="remove-preview" onclick="adminModule.removeImagePreview()">×</button>
             </div>
             <p class="preview-filename">URL: ${url.substring(0, 40)}${url.length > 40 ? '...' : ''}</p>
         `;
@@ -1413,4 +1428,7 @@ const adminModule = {
 };
 
 // Inicializar módulo cuando el DOM esté listo
-document.addEventListener('DOMContentLoaded', () => adminModule.init()); 
+document.addEventListener('DOMContentLoaded', () => adminModule.init());
+
+// Exportar el módulo para su uso en otros archivos
+export default adminModule; 

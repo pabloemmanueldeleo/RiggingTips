@@ -4,14 +4,27 @@ service firebase.storage {
   match /b/{bucket}/o {
     // Función para verificar si el usuario es administrador
     function isAdmin() {
-      return request.auth != null && 
-        request.auth.token.email == 'pabloemmanueldeleo@gmail.com';
+      return request.auth != null &&
+        ( firestore.exists(/databases/(default)/documents/correosAutorizados/$(request.auth.token.email)) );
+    }
+
+    // Función para validar el tipo de archivo
+    function isValidFileType() {
+      return request.resource.contentType.matches('image/.*') ||
+             request.resource.contentType.matches('video/.*');
+    }
+
+    // Función para validar el tamaño del archivo (max 50MB)
+    function isValidFileSize() {
+      return request.resource.size <= 50 * 1024 * 1024;
     }
     
-    // Permitir lectura sin restricciones por CORS
+    // Reglas generales para todos los archivos
     match /{allPaths=**} {
       allow read;
-      allow write: if isAdmin();
+      allow write: if isAdmin() && 
+                     isValidFileType() && 
+                     isValidFileSize();
     }
   }
 } 

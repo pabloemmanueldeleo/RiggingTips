@@ -15,11 +15,9 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     
-    <!-- Environment Variables -->
+    <!-- Environment Variables y Firebase Config -->
     <script src="../js/env.js"></script>
-    
-    <!-- App Scripts -->
-    <script src="../js/firebase-config.js" type="module"></script>
+    <script src="../js/firebase-service.js"></script>
 </head>
 <body>
     <div id="errorContainer"></div>
@@ -31,6 +29,9 @@
             <button id="loginButton" class="btn-primary">
                 Iniciar sesión con Google
             </button>
+            <div style="margin-top: 20px; text-align: center;">
+                <p style="color: #666;">Solo usuarios autorizados pueden acceder a este panel</p>
+            </div>
         </div>
     </div>
 
@@ -124,9 +125,9 @@
                     <div class="form-group">
                         <label>Imagen</label>
                         <div class="file-input-group">
-                            <input type="file" id="imagenFile" accept="image/*" onchange="previewImage(this)">
+                            <input type="file" id="imagenFile" accept="image/*" onchange="adminModule.previewImage(this)">
                             <p class="texto-o">o</p>
-                            <input type="text" id="imagen" placeholder="URL de imagen (https://...)" onchange="previewImageFromUrl(this.value)">
+                            <input type="text" id="imagen" placeholder="URL de imagen (https://...)" onchange="adminModule.previewImageFromUrl(this.value)">
                             <button type="button" id="browseStorageBtn" class="btn-secondary">Explorar imágenes en Storage</button>
                         </div>
                         <div id="imagePreview" class="image-preview"></div>
@@ -180,9 +181,6 @@
     <script src="../js/database-seed.js"></script>
     
     <!-- Módulos de la aplicación -->
-    <script type="module" src="js/modules/auth.js"></script>
-    <script type="module" src="js/modules/ui.js"></script>
-    <script type="module" src="js/modules/data.js"></script>
     <script type="module" src="js/admin.js"></script>
 </body>
 </html> 
