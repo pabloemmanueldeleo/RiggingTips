@@ -36,16 +36,38 @@ const adminModule = {
         document.getElementById('cancelButton')?.addEventListener('click', () => this.hideModal());
         document.getElementById('tipForm')?.addEventListener('submit', (e) => this.saveTip(e));
         
-        // Buscar a medida que se escribe con un pequeño retraso
-        const searchInput = document.getElementById('searchInput');
-        if (searchInput) {
-            let searchTimeout;
-            searchInput.addEventListener('input', (e) => {
-                clearTimeout(searchTimeout);
-                searchTimeout = setTimeout(() => {
-                    this.handleSearch(e.target.value);
-                }, 300); // 300ms de delay para evitar muchas consultas
-            });
+        // Agregar botón X para limpiar búsqueda
+        const searchBar = document.querySelector('.search-bar');
+        if (searchBar) {
+            const searchInput = searchBar.querySelector('input');
+            if (searchInput) {
+                // Añadir el botón X si no existe
+                if (!document.getElementById('searchClearBtn')) {
+                    const clearBtn = document.createElement('button');
+                    clearBtn.id = 'searchClearBtn';
+                    clearBtn.className = 'search-clear-btn';
+                    clearBtn.innerHTML = '&times;';
+                    clearBtn.title = 'Limpiar búsqueda';
+                    
+                    // Insertar después del input
+                    searchInput.parentNode.insertBefore(clearBtn, searchInput.nextSibling);
+                    
+                    // Añadir evento al botón
+                    clearBtn.addEventListener('click', () => {
+                        searchInput.value = '';
+                        this.loadTips(); // Recargar todos los tips
+                    });
+                }
+                
+                // Buscar a medida que se escribe con un pequeño retraso
+                let searchTimeout;
+                searchInput.addEventListener('input', (e) => {
+                    clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(() => {
+                        this.handleSearch(e.target.value);
+                    }, 300); // 300ms de delay para evitar muchas consultas
+                });
+            }
         }
         
         // Botones para gestión de categorías
@@ -347,129 +369,71 @@ const adminModule = {
     },
     
     renderTips() {
-        const container = document.getElementById('tipsList');
-        container.innerHTML = '';
-        
-        if (this.allTips.length === 0) {
-            container.innerHTML = '<div class="no-results">No se encontraron tips</div>';
+        const tipsGrid = document.getElementById('tipsList');
+        if (!tipsGrid) return;
+
+        // Paginación
+        const totalTips = this.allTips.length;
+        const totalPages = Math.ceil(totalTips / this.itemsPerPage);
+        const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+        const endIndex = Math.min(startIndex + this.itemsPerPage, totalTips);
+        const tipsToShow = this.allTips.slice(startIndex, endIndex);
+
+        if (tipsToShow.length === 0) {
+            tipsGrid.innerHTML = '<p class="no-results">No se encontraron tips. Crea uno nuevo.</p>';
             return;
         }
-        
-        // Calcular paginación
-        const startIndex = (this.currentPage - 1) * this.itemsPerPage;
-        const endIndex = Math.min(startIndex + this.itemsPerPage, this.allTips.length);
-        const paginatedTips = this.allTips.slice(startIndex, endIndex);
-        
-        // Crear controles de ordenamiento
-        const sortControls = document.createElement('div');
-        sortControls.className = 'sort-controls';
-        sortControls.innerHTML = `
-            <span>Ordenar por: </span>
-            <select id="sortOrder">
-                <option value="nuevo" ${this.sortOrder === 'nuevo' ? 'selected' : ''}>Más recientes primero</option>
-                <option value="antiguo" ${this.sortOrder === 'antiguo' ? 'selected' : ''}>Más antiguos primero</option>
-            </select>
-        `;
-        container.appendChild(sortControls);
-        
-        // Añadir event listener al control de ordenamiento
-        document.getElementById('sortOrder').addEventListener('change', (e) => {
-            this.sortOrder = e.target.value;
-            this.loadTips(); // Recargar con nuevo orden
-        });
-        
-        // Crear grid para los tips
-        const tipsGrid = document.createElement('div');
-        tipsGrid.className = 'tips-grid';
-        container.appendChild(tipsGrid);
-        
-        paginatedTips.forEach(tip => {
-            const card = document.createElement('div');
-            card.className = 'tip-card';
+
+        tipsGrid.innerHTML = tipsToShow.map(tip => {
+            const categoriaColor = this.getCategoryColor(tip.categoria);
+            const color = categoriaColor || '#666';
             
-            // Determinar si hay imagen
-            let mediaHTML = '';
-            if (tip.imagen) {
-                mediaHTML = `
-                    <div class="tip-media">
-                        <img src="${tip.imagen}" alt="${tip.titulo}" onerror="this.src='https://placehold.co/600x400?text=Imagen+no+disponible'">
-                        ${tip.video ? '<div class="video-indicator">▶️</div>' : ''}
-                    </div>
-                `;
-            }
+            const esPublico = tip.publico !== false; // Si no está definido, asumir que es público
+            const esDestacado = tip.destacado === true;
             
-            // Obtener categoría y su color
-            const categoria = this.categorias.find(cat => cat.nombre === tip.categoria);
-            const categoriaColor = categoria && categoria.color ? categoria.color : '#4caf50';
+            // Verificar si hay imagen
+            const imagenUrl = tip.imagen || (tip.media && tip.media.principal) || '';
             
-            card.innerHTML = `
-                <div class="publico-badge ${tip.publico !== false ? 'visible' : 'hidden'}"></div>
-                ${mediaHTML}
-                <div class="tip-content">
-                    <h3>${tip.titulo || 'Sin título'}</h3>
-                    <p>${tip.descripcion || 'Sin descripción'}</p>
-                </div>
-                <div class="tip-footer">
-                    <span class="tip-categoria" style="background-color: ${categoriaColor}80; color: ${this.getContrastColor(categoriaColor)}">
-                        <span class="category-color-indicator" style="background-color: ${categoriaColor}"></span>
-                        ${tip.categoria || 'Sin categoría'}
-                    </span>
-                    <div class="tip-actions">
-                        <button class="action-btn edit-btn" title="Editar"></button>
-                        <button class="action-btn delete-btn" title="Eliminar"></button>
+            return `
+                <div class="tip-card ${esDestacado ? 'destacado' : ''}" data-id="${tip.id}">
+                    ${imagenUrl ? `
+                        <div class="tip-media">
+                            <img src="${imagenUrl}" alt="${tip.titulo}" loading="lazy" onerror="this.onerror=null; this.src='../img/logo-trimm-academy.png'; this.style.objectFit='contain'; this.style.backgroundColor='white';">
+                        </div>
+                    ` : ''}
+                    <div class="tip-content">
+                        <h3>${tip.titulo || 'Sin título'}</h3>
+                        <p>${tip.descripcion || 'Sin descripción'}</p>
+                        
+                        <div class="tip-categoria" style="background-color: ${color}20; border: 1px solid ${color}; color: ${color};">
+                            <span class="categoria-color-indicator" style="background-color: ${color};"></span>
+                            ${tip.categoria || 'Sin categoría'}
+                        </div>
+                        
+                        <div class="tip-actions">
+                            <button class="action-btn edit-btn" onclick="adminModule.showTipForm('${tip.id}')" title="Editar"></button>
+                            <button class="action-btn delete-btn" onclick="adminModule.confirmDeleteTip('${tip.id}')" title="Eliminar"></button>
+                            <button class="action-btn highlight-btn ${esDestacado ? 'highlight-on' : 'highlight-off'}" 
+                                onclick="adminModule.toggleHighlight('${tip.id}', ${!esDestacado})" 
+                                title="${esDestacado ? 'Quitar destacado' : 'Destacar tip'}">
+                                ${esDestacado ? '⭐' : '☆'}
+                            </button>
+                        </div>
+                        
+                        <div class="publico-badge ${esPublico ? 'visible' : 'hidden'}" title="${esPublico ? 'Publicado' : 'No publicado'}"></div>
                     </div>
                 </div>
             `;
-            
-            // Añadir event listeners
-            card.querySelector('.edit-btn').addEventListener('click', () => this.showTipForm(tip.id));
-            card.querySelector('.delete-btn').addEventListener('click', () => this.confirmDeleteTip(tip.id));
-            
-            tipsGrid.appendChild(card);
-        });
-        
-        // Crear controles de paginación si hay más de una página
-        if (this.allTips.length > this.itemsPerPage) {
-            const totalPages = Math.ceil(this.allTips.length / this.itemsPerPage);
-            
-            const paginationControls = document.createElement('div');
-            paginationControls.className = 'pagination-controls';
-            
-            // Información de paginación
-            paginationControls.innerHTML = `
-                <div class="pagination-info">
-                    Mostrando ${startIndex + 1}-${endIndex} de ${this.allTips.length} tips
-                </div>
-                <div class="pagination-buttons">
-                    <button class="pagination-btn" id="prevPage" ${this.currentPage === 1 ? 'disabled' : ''}>
-                        &laquo; Anterior
-                    </button>
-                    <span class="page-indicator">Página ${this.currentPage} de ${totalPages}</span>
-                    <button class="pagination-btn" id="nextPage" ${this.currentPage === totalPages ? 'disabled' : ''}>
-                        Siguiente &raquo;
-                    </button>
-                </div>
-            `;
-            
-            container.appendChild(paginationControls);
-            
-            // Event listeners para paginación
-            document.getElementById('prevPage').addEventListener('click', () => {
-                if (this.currentPage > 1) {
-                    this.currentPage--;
-                    this.renderTips();
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                }
-            });
-            
-            document.getElementById('nextPage').addEventListener('click', () => {
-                if (this.currentPage < totalPages) {
-                    this.currentPage++;
-                    this.renderTips();
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                }
-            });
-        }
+        }).join('');
+
+        // Agregar paginación
+        this.renderPagination(totalPages);
+    },
+    
+    // Función de utilidad para obtener el color de una categoría
+    getCategoryColor(categoria) {
+        const cat = this.categorias.find(c => c.nombre === categoria);
+        return cat && cat.color ? cat.color : '#666';
     },
     
     // Función de utilidad para determinar el color de texto según el fondo
@@ -836,6 +800,9 @@ const adminModule = {
             } else {
                 // Crear nuevo tip
                 tipData.creado = firebase.firestore.Timestamp.now();
+                if (this.user && this.user.email) {
+                    tipData.autorEmail = this.user.email; // Añadir email del autor
+                }
                 await db.collection('nodos').add(tipData);
                 this.showSuccess('Tip creado correctamente');
             }
@@ -1152,7 +1119,7 @@ const adminModule = {
         const imagePreview = document.getElementById('imagePreview');
         imagePreview.innerHTML = `
             <div class="preview-container">
-                <img src="${url}" alt="Vista previa" onerror="this.src='https://placehold.co/600x400?text=Error+de+imagen'">
+                <img src="${url}" alt="Vista previa" onerror="this.onerror=null; this.src='../img/logo-trimm-academy.png'; this.style.objectFit='contain'; this.style.backgroundColor='white';">
                 <button type="button" class="remove-preview" onclick="adminModule.removeImagePreview()">×</button>
             </div>
             <p class="preview-filename">URL: ${url.substring(0, 40)}${url.length > 40 ? '...' : ''}</p>
@@ -1424,6 +1391,95 @@ const adminModule = {
             console.error('Error al eliminar categoría:', error);
             this.showError('Error al eliminar categoría: ' + error.message);
         }
+    },
+    
+    async toggleHighlight(tipId, destacado) {
+        try {
+            console.log(`Cambiando estado destacado de tip ${tipId} a ${destacado}`);
+            const { db, firebase } = window.firebaseService;
+            const tipRef = db.collection('nodos').doc(tipId);
+            
+            // Verificar si existe antes de actualizar
+            const doc = await tipRef.get();
+            if (!doc.exists) {
+                console.error(`El documento ${tipId} no existe`);
+                this.showError(`No se pudo destacar el elemento. El documento no existe.`);
+                return;
+            }
+            
+            // Actualizar el campo destacado directamente
+            await tipRef.update({
+                destacado: !!destacado, // Asegurar que sea booleano
+                actualizado: firebase.firestore.Timestamp.now() // Actualizar timestamp
+            });
+            
+            console.log(`Tip ${tipId} actualizado correctamente`);
+            
+            // Actualizar la UI
+            this.showSuccess(`Tip ${destacado ? 'destacado' : 'quitado de destacados'} correctamente`);
+            
+            // Recargar los tips para mostrar cambios
+            await this.loadTips();
+        } catch (error) {
+            console.error('Error al cambiar estado destacado:', error);
+            this.showError('Error al cambiar estado destacado: ' + error.message);
+        }
+    },
+    
+    renderPagination(totalPages) {
+        const tipsGrid = document.getElementById('tipsList');
+        if (!tipsGrid) return;
+        
+        // Si no hay más de una página, no mostrar paginación
+        if (totalPages <= 1) return;
+        
+        // Crear el elemento de paginación
+        const paginationEl = document.createElement('div');
+        paginationEl.className = 'pagination-controls';
+        
+        // Información de paginación
+        const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+        const endIndex = Math.min(startIndex + this.itemsPerPage, this.allTips.length);
+        
+        paginationEl.innerHTML = `
+            <div class="pagination-info">
+                Mostrando ${startIndex + 1}-${endIndex} de ${this.allTips.length} tips
+            </div>
+            <div class="pagination-buttons">
+                <button class="pagination-btn" id="prevPage" ${this.currentPage === 1 ? 'disabled' : ''}>
+                    &laquo; Anterior
+                </button>
+                <span class="page-indicator">Página ${this.currentPage} de ${totalPages}</span>
+                <button class="pagination-btn" id="nextPage" ${this.currentPage === totalPages ? 'disabled' : ''}>
+                    Siguiente &raquo;
+                </button>
+            </div>
+        `;
+        
+        // Añadir la paginación después de la lista de tips
+        const existingPagination = document.querySelector('.pagination-controls');
+        if (existingPagination) {
+            existingPagination.remove();
+        }
+        
+        tipsGrid.parentNode.insertBefore(paginationEl, tipsGrid.nextSibling);
+        
+        // Event listeners para paginación
+        document.getElementById('prevPage')?.addEventListener('click', () => {
+            if (this.currentPage > 1) {
+                this.currentPage--;
+                this.renderTips();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        });
+        
+        document.getElementById('nextPage')?.addEventListener('click', () => {
+            if (this.currentPage < totalPages) {
+                this.currentPage++;
+                this.renderTips();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        });
     },
 };
 

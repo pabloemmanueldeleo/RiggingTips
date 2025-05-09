@@ -14,6 +14,12 @@
     --surface: #ffffff;
     --on-surface: #1c1b1f;
     --surface-container: #f5f5f5;
+    --like-color: #4caf50;
+    --dislike-color: #f44336;
+    --destacado-color: #ffc107;
+    --privado-color: #607d8b;
+    --section-border: #e0e0e0;
+    --section-bg: rgba(0,104,116,0.03);
 }
 
 /* Estilos base */
@@ -30,9 +36,19 @@ body {
 .top-bar {
     background-color: var(--primary-color);
     color: white;
-    padding: var(--spacing-unit);
+    padding: var(--spacing-unit) 0;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     animation: slideInUp 0.4s ease;
+}
+
+.top-bar-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 var(--spacing-unit);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
 }
 
 .top-bar h1 {
@@ -52,11 +68,12 @@ body {
     display: flex;
     gap: var(--spacing-unit);
     margin-bottom: var(--spacing-unit);
+    position: relative;
 }
 
 .search-input {
     flex: 1;
-    padding: 0.75rem;
+    padding: 0.75rem 2.5rem 0.75rem 0.75rem;
     border: 1px solid #ddd;
     border-radius: var(--border-radius);
     font-size: 1rem;
@@ -78,6 +95,29 @@ body {
     transform: translateY(-2px);
 }
 
+.search-clear-btn {
+    position: absolute;
+    right: 7.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.2rem;
+    color: #999;
+    height: 30px;
+    width: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+.search-clear-btn:hover {
+    background-color: rgba(0,0,0,0.1);
+    color: #666;
+}
+
 /* Barra de categorías */
 .categorias-bar {
     display: flex;
@@ -92,8 +132,9 @@ body {
 /* Grid de nodos */
 .nodos-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: var(--spacing-unit);
+    grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 1rem;
 }
 
 /* Tarjeta de nodo - Material Design 3 */
@@ -112,8 +153,8 @@ body {
 }
 
 .nodo-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 14px 28px rgba(0,0,0,0.1), 0 10px 10px rgba(0,0,0,0.1);
+    transform: translateY(-4px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
 }
 
 .nodo-card:hover::after {
@@ -281,10 +322,31 @@ body {
 @media (max-width: 768px) {
     .search-container {
         flex-direction: column;
+        position: relative;
     }
     
     .nodos-grid {
         grid-template-columns: 1fr;
+    }
+    
+    .card, .tip-card {
+        margin-bottom: 1rem; 
+    }
+    
+    .search-clear-btn {
+        right: 0.75rem;
+        top: 1.25rem;
+    }
+    
+    .destacados-section,
+    .mas-votados-section {
+        margin: 0.5rem 0;
+        padding: 0.75rem;
+    }
+    
+    .destacados-section h2,
+    .mas-votados-section h2 {
+        font-size: 1.1rem;
     }
 }
 
@@ -791,4 +853,378 @@ body {
 .btn-primary:hover {
     background-color: var(--primary-dark);
     transform: translateY(-2px);
+}
+
+/* Destacados y privados */
+.destacado {
+    border: 2px solid var(--destacado-color);
+    box-shadow: 0 4px 8px rgba(255, 193, 7, 0.15);
+}
+
+.destacado-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background-color: var(--destacado-color);
+    color: white;
+    padding: 0.25rem;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    z-index: 2;
+    font-size: 0.9rem;
+}
+
+.destacado-badge-small {
+    background-color: var(--destacado-color);
+    color: white;
+    padding: 0.1rem 0.2rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    vertical-align: middle;
+    margin-left: 4px;
+}
+
+.privado-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background-color: var(--privado-color);
+    color: white;
+    padding: 0.25rem;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    z-index: 2;
+    font-size: 0.9rem;
+}
+
+/* Estadísticas y votación */
+.card-stats {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.icon-eye:before {
+    content: "👁️";
+}
+
+.icon-heart:before {
+    content: "❤️";
+}
+
+.vote-btn {
+    background: var(--surface);
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.vote-btn:hover {
+    transform: translateY(-2px);
+    border-color: var(--like-color);
+    color: var(--like-color);
+}
+
+.vote-btn.voted {
+    background-color: var(--like-color);
+    color: white;
+    border-color: var(--like-color);
+}
+
+/* Secciones especiales - Ajustado para ocupar menos espacio */
+.destacados-section,
+.mas-votados-section {
+    margin: 1rem 0;
+    padding: 1rem 0;
+    border-radius: var(--border-radius);
+    background-color: var(--section-bg);
+    border: 1px solid var(--section-border);
+    position: relative;
+}
+
+/* Hacemos los títulos de sección más pequeños y compactos */
+.destacados-section h2,
+.mas-votados-section h2 {
+    margin-top: 0;
+    margin-bottom: 0.75rem;
+    color: var(--primary-color);
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--section-border);
+}
+
+.destacados-section .nodos-grid,
+.mas-votados-section .nodos-grid {
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+/* Hacemos consistente los tamaños de cards entre admin y público */
+.card, .tip-card {
+    background-color: var(--surface);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.card:hover, .tip-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.card-media, .tip-media {
+    position: relative;
+    width: 100%;
+    height: 180px;
+    overflow: hidden;
+}
+
+.card-media img, .tip-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.card-content, .tip-content {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.card-content h3, .tip-content h3 {
+    margin: 0 0 0.5rem;
+    font-size: 1.2rem;
+    color: var(--text-primary);
+}
+
+.card-content p, .tip-content p {
+    margin: 0 0 1rem;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    line-height: 1.5;
+    flex-grow: 1;
+}
+
+.card-footer, .tip-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 0.5rem;
+    margin-top: auto;
+    border-top: 1px solid #eee;
+}
+
+.card-stats {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.icon-eye:before {
+    content: "👁️";
+}
+
+.icon-heart:before {
+    content: "❤️";
+}
+
+.vote-btn {
+    background: var(--surface);
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.vote-btn:hover {
+    transform: translateY(-2px);
+    border-color: var(--like-color);
+    color: var(--like-color);
+}
+
+.vote-btn.voted {
+    background-color: var(--like-color);
+    color: white;
+    border-color: var(--like-color);
+}
+
+/* Nuevos estilos para sección principal */
+.container > h2 {
+    color: var(--primary-color);
+    margin-top: 1rem;
+    font-size: 1.2rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--section-border);
+}
+
+/* Estilos del Banner Promocional */
+.promo-banner {
+    background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-color) 100%);
+    color: white;
+    text-align: center;
+    padding: 0.75rem 0;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+    position: relative;
+    overflow: hidden;
+}
+
+.promo-banner::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23ffffff' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E");
+    opacity: 0.3;
+    z-index: 0;
+}
+
+.promo-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 1rem;
+    position: relative;
+    z-index: 1;
+}
+
+.promo-logo {
+    height: 40px;
+    width: auto;
+    margin-right: 1rem;
+    border-radius: 4px;
+}
+
+.promo-content {
+    flex: 1;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.promo-btn {
+    display: inline-block;
+    background-color: #FF6B00;
+    color: white;
+    font-weight: 600;
+    padding: 0.4rem 1rem;
+    border-radius: 20px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    border: 1px solid rgba(255,255,255,0.3);
+    margin-left: 0.5rem;
+}
+
+.promo-btn:hover {
+    background-color: #FF8A00;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.social-links {
+    display: flex;
+    gap: 0.75rem;
+    margin-left: 1rem;
+}
+
+.social-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background-color: rgba(255,255,255,0.15);
+    border-radius: 50%;
+    color: white;
+    text-decoration: none;
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+}
+
+.social-icon:hover {
+    background-color: rgba(255,255,255,0.3);
+    transform: scale(1.1);
+}
+
+@media (max-width: 768px) {
+    .promo-container {
+        flex-direction: column;
+        gap: 0.5rem;
+        padding: 0.5rem;
+    }
+    
+    .promo-logo {
+        height: 30px;
+        margin-right: 0;
+        margin-bottom: 0.5rem;
+    }
+    
+    .promo-content {
+        text-align: center;
+        margin-bottom: 0.5rem;
+    }
+    
+    .social-links {
+        margin-left: 0;
+    }
+    
+    .promo-btn {
+        margin: 0.25rem auto;
+    }
 } 

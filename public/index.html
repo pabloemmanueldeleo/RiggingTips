@@ -21,16 +21,35 @@
     <script src="js/firebase-config.js" type="module"></script>
 </head>
 <body>
+    <!-- Banner Promocional del Webinar -->
+    <div class="promo-banner">
+        <div class="promo-container">
+            <img src="img/logo-trimm-academy.png" alt="Trimm Academy" class="promo-logo">
+            <div class="promo-content">
+                <strong>¡Nuevo Webinar de Rigging!</strong> Aprende técnicas avanzadas de rigging con Pablo Emmanuel De Leo
+                <a href="https://trimmacademy.com/webinar-rigging" class="promo-btn" target="_blank">¡Inscríbete Ahora!</a>
+            </div>
+            <div class="social-links">
+                <a href="https://www.instagram.com/trimm.academy/" target="_blank" class="social-icon">📸</a>
+                <a href="https://www.youtube.com/@Trimm.academy" target="_blank" class="social-icon">📺</a>
+                <a href="https://www.linkedin.com/in/pabloemmanueldeleo/" target="_blank" class="social-icon">💼</a>
+            </div>
+        </div>
+    </div>
+
     <header class="top-bar">
-        <h1>RiggingTips</h1>
-        <nav class="nav-links">
-            <a href="/admin" class="admin-link">Panel Admin</a>
-        </nav>
+        <div class="top-bar-content">
+            <h1>RiggingTips</h1>
+            <nav class="nav-links">
+                <a href="/admin" class="admin-link">Panel Admin</a>
+            </nav>
+        </div>
     </header>
 
     <main class="container">
         <div class="search-container">
             <input type="text" id="searchInput" class="search-input" placeholder="Buscar tips...">
+            <button id="searchClearBtn" class="search-clear-btn">&times;</button>
             <button id="searchBtn" class="search-button">Buscar</button>
         </div>
 

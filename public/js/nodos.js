@@ -6,15 +6,54 @@ const nodosModule = {
     searchBtn: null,
     currentFilter: '',
     categorias: [],
+    sortOrder: 'nuevo', // Por defecto, ordenar por más recientes
+    destacadosSection: null,
+    masVotadosSection: null,
+    allNodos: [],
 
     init() {
         this.db = firebase.firestore();
         this.nodosGrid = document.getElementById('nodosGrid');
         this.searchInput = document.getElementById('searchInput');
         this.searchBtn = document.getElementById('searchBtn');
+        
+        // Crear secciones para destacados y más votados
+        this.createAdditionalSections();
+        
         this.loadCategorias();
         this.setupEventListeners();
         this.loadNodos();
+    },
+    
+    createAdditionalSections() {
+        // Crear sección de destacados si no existe
+        if (!document.getElementById('destacadosSection')) {
+            const container = document.querySelector('.container');
+            this.destacadosSection = document.createElement('div');
+            this.destacadosSection.id = 'destacadosSection';
+            this.destacadosSection.className = 'destacados-section';
+            this.destacadosSection.innerHTML = `
+                <h2>Tips Destacados ⭐</h2>
+                <div id="destacadosGrid" class="nodos-grid"></div>
+            `;
+            
+            this.masVotadosSection = document.createElement('div');
+            this.masVotadosSection.id = 'masVotadosSection';
+            this.masVotadosSection.className = 'mas-votados-section';
+            this.masVotadosSection.innerHTML = `
+                <h2>Los Más Votados 👍</h2>
+                <div id="masVotadosGrid" class="nodos-grid"></div>
+            `;
+            
+            // Insertar después de categorias pero antes del grid principal
+            container.insertBefore(this.destacadosSection, this.nodosGrid);
+            container.insertBefore(this.masVotadosSection, this.nodosGrid);
+            
+            // Actualizar título de sección principal
+            const tituloSeccionPrincipal = document.createElement('h2');
+            tituloSeccionPrincipal.textContent = 'Todos los Tips';
+            container.insertBefore(tituloSeccionPrincipal, this.nodosGrid);
+        }
     },
     
     async loadCategorias() {
@@ -34,20 +73,56 @@ const nodosModule = {
         // Búsqueda
         this.searchInput.addEventListener('input', () => this.handleSearch());
         this.searchBtn.addEventListener('click', () => this.handleSearch());
+        
+        // Botón de limpiar búsqueda
+        const searchClearBtn = document.getElementById('searchClearBtn');
+        if (searchClearBtn) {
+            searchClearBtn.addEventListener('click', () => {
+                this.searchInput.value = '';
+                this.handleSearch();
+                this.loadNodos(); // Recargar todos los nodos
+            });
+        }
 
         // Filtrado por categoría
         window.addEventListener('filtrarPorCategoria', (e) => {
             this.currentFilter = e.detail.categoria;
             this.loadNodos();
         });
+        
+        // Evento para ordenar
+        const sortSelect = document.getElementById('sortOrder');
+        if (sortSelect) {
+            sortSelect.addEventListener('change', (e) => {
+                this.sortOrder = e.target.value;
+                this.loadNodos();
+            });
+        }
     },
 
     async loadNodos() {
         try {
-            let query = this.db.collection('nodos');
+            // Cargar destacados primero
+            await this.loadDestacados();
+            
+            // Cargar los más votados
+            await this.loadMasVotados();
+            
+            // Cargar el resto de nodos para la sección "Todos los Tips"
+            let query = this.db.collection('nodos').where('publico', '==', true); // Asegurar que solo se carguen tips públicos
             
             if (this.currentFilter) {
                 query = query.where('categoria', '==', this.currentFilter);
+            }
+            
+            // Ordenar por fecha
+            if (this.sortOrder === 'nuevo') {
+                query = query.orderBy('fechaCreacion', 'desc');
+            } else if (this.sortOrder === 'antiguo') {
+                query = query.orderBy('fechaCreacion', 'asc');
+            } else if (this.sortOrder === 'destacados') {
+                // Si se ordena por destacados, además de ser público, debe ser destacado
+                query = query.where('destacado', '==', true).orderBy('fechaCreacion', 'desc');
             }
 
             const snapshot = await query.get();
@@ -61,14 +136,132 @@ const nodosModule = {
                     imagen: data.imagen || (data.media && data.media.principal) || '',
                     video: data.video || (data.media && data.media.video) || '',
                     contenido: data.contenido || '',
-                    url: data.url || ''
+                    url: data.url || '',
+                    fechaCreacion: data.fechaCreacion ? data.fechaCreacion.toDate() : new Date(),
+                    destacado: data.destacado || false,
+                    publico: data.publico !== false,
+                    likes: data.likes || 0,
+                    dislikes: data.dislikes || 0,
+                    vistas: data.vistas || 0
                 };
             });
 
-            this.renderNodos(nodos);
+            this.allNodos = nodos;
+            this.renderNodos(nodos, this.nodosGrid);
         } catch (error) {
             console.error('Error al cargar nodos:', error);
             this.nodosGrid.innerHTML = '<p class="error-message">Error al cargar los tips. Por favor, intenta de nuevo.</p>';
+        }
+    },
+    
+    async loadDestacados() {
+        try {
+            const destacadosGrid = document.getElementById('destacadosGrid');
+            if (!destacadosGrid) return;
+            
+            // Primero traemos todos los nodos públicos
+            const snapshot = await this.db.collection('nodos')
+                .where('publico', '==', true)
+                .get();
+            
+            if (snapshot.empty) {
+                this.destacadosSection.style.display = 'none';
+                return;
+            }
+            
+            // Luego filtramos manualmente los destacados
+            const nodos = snapshot.docs
+                .map(doc => {
+                    const data = doc.data();
+                    return {
+                        id: doc.id,
+                        titulo: data.titulo || data.nombre || 'Sin título',
+                        descripcion: data.descripcion || 'Sin descripción',
+                        categoria: data.categoria || 'Sin categoría',
+                        imagen: data.imagen || (data.media && data.media.principal) || '',
+                        video: data.video || (data.media && data.media.video) || '',
+                        contenido: data.contenido || '',
+                        url: data.url || '',
+                        fechaCreacion: data.fechaCreacion ? data.fechaCreacion.toDate() : new Date(),
+                        destacado: data.destacado || false,
+                        publico: data.publico !== false,
+                        likes: data.likes || 0,
+                        dislikes: data.dislikes || 0,
+                        vistas: data.vistas || 0
+                    };
+                })
+                .filter(nodo => nodo.destacado === true) // Filtrar destacados manualmente
+                .sort((a, b) => b.fechaCreacion - a.fechaCreacion) // Ordenar por fecha manualmente
+                .slice(0, 3); // Limitamos a 3 elementos
+            
+            if (nodos.length === 0) {
+                this.destacadosSection.style.display = 'none';
+                return;
+            }
+            
+            this.destacadosSection.style.display = 'block';
+            
+            this.renderNodos(nodos, destacadosGrid);
+        } catch (error) {
+            console.error('Error al cargar destacados:', error);
+            if (this.destacadosSection) {
+                this.destacadosSection.style.display = 'none';
+            }
+        }
+    },
+    
+    async loadMasVotados() {
+        try {
+            const masVotadosGrid = document.getElementById('masVotadosGrid');
+            if (!masVotadosGrid) return;
+            
+            // Traemos todos los nodos públicos
+            const snapshot = await this.db.collection('nodos')
+                .where('publico', '==', true)
+                .get();
+            
+            if (snapshot.empty) {
+                this.masVotadosSection.style.display = 'none';
+                return;
+            }
+            
+            // Filtramos y ordenamos manualmente por likes
+            const nodos = snapshot.docs
+                .map(doc => {
+                    const data = doc.data();
+                    return {
+                        id: doc.id,
+                        titulo: data.titulo || data.nombre || 'Sin título',
+                        descripcion: data.descripcion || 'Sin descripción',
+                        categoria: data.categoria || 'Sin categoría',
+                        imagen: data.imagen || (data.media && data.media.principal) || '',
+                        video: data.video || (data.media && data.media.video) || '',
+                        contenido: data.contenido || '',
+                        url: data.url || '',
+                        fechaCreacion: data.fechaCreacion ? data.fechaCreacion.toDate() : new Date(),
+                        destacado: data.destacado || false,
+                        publico: data.publico !== false,
+                        likes: data.likes || 0,
+                        dislikes: data.dislikes || 0,
+                        vistas: data.vistas || 0
+                    };
+                })
+                .sort((a, b) => (b.likes || 0) - (a.likes || 0)) // Ordenar por likes manualmente
+                .slice(0, 3); // Limitar a 3 elementos
+            
+            if (nodos.length === 0) {
+                this.masVotadosSection.style.display = 'none';
+                return;
+            }
+            
+            this.masVotadosSection.style.display = 'block';
+            
+            this.renderNodos(nodos, masVotadosGrid);
+        } catch (error) {
+            console.error('Error al cargar más votados:', error);
+            if (this.masVotadosSection) {
+                this.masVotadosSection.style.display = 'none';
+            }
         }
     },
 
@@ -80,6 +273,15 @@ const nodosModule = {
     async loadNodosWithSearch(searchTerm) {
         try {
             let query = this.db.collection('nodos');
+            
+            if (this.sortOrder === 'nuevo') {
+                query = query.orderBy('fechaCreacion', 'desc');
+            } else if (this.sortOrder === 'antiguo') {
+                query = query.orderBy('fechaCreacion', 'asc');
+            } else if (this.sortOrder === 'destacados') {
+                query = query.where('destacado', '==', true).orderBy('fechaCreacion', 'desc');
+            }
+            
             const snapshot = await query.get();
             const nodos = snapshot.docs.map(doc => {
                 const data = doc.data();
@@ -91,7 +293,13 @@ const nodosModule = {
                     imagen: data.imagen || (data.media && data.media.principal) || '',
                     video: data.video || (data.media && data.media.video) || '',
                     contenido: data.contenido || '',
-                    url: data.url || ''
+                    url: data.url || '',
+                    fechaCreacion: data.fechaCreacion ? data.fechaCreacion.toDate() : new Date(),
+                    destacado: data.destacado || false,
+                    publico: data.publico !== false,
+                    likes: data.likes || 0,
+                    dislikes: data.dislikes || 0,
+                    vistas: data.vistas || 0
                 };
             }).filter(nodo => 
                 nodo.titulo.toLowerCase().includes(searchTerm) ||
@@ -102,9 +310,17 @@ const nodosModule = {
                 const filteredNodos = nodos.filter(nodo => 
                     nodo.categoria === this.currentFilter
                 );
-                this.renderNodos(filteredNodos);
+                this.renderNodos(filteredNodos, this.nodosGrid);
             } else {
-                this.renderNodos(nodos);
+                this.renderNodos(nodos, this.nodosGrid);
+            }
+            
+            // Ocultar secciones especiales durante la búsqueda
+            if (this.destacadosSection) {
+                this.destacadosSection.style.display = 'none';
+            }
+            if (this.masVotadosSection) {
+                this.masVotadosSection.style.display = 'none';
             }
         } catch (error) {
             console.error('Error en la búsqueda:', error);
@@ -116,22 +332,51 @@ const nodosModule = {
         return cat ? cat.color : '#666';
     },
 
-    renderNodos(nodos) {
-        if (!this.nodosGrid) return;
+    renderNodos(nodos, container) {
+        if (!container) return;
 
         if (nodos.length === 0) {
-            this.nodosGrid.innerHTML = '<p class="no-results">No se encontraron tips. ¡Sé el primero en compartir uno!</p>';
+            container.innerHTML = '<p class="no-results">No se encontraron tips. ¡Sé el primero en compartir uno!</p>';
             return;
         }
+        
+        // Crear controles de ordenamiento si no existen y es el contenedor principal
+        if (container === this.nodosGrid) {
+            let sortControlExists = document.querySelector('.sort-control');
+            if (!sortControlExists) {
+                const sortControl = document.createElement('div');
+                sortControl.className = 'sort-control';
+                sortControl.innerHTML = `
+                    <label>Ordenar por: </label>
+                    <select id="sortOrder">
+                        <option value="nuevo" ${this.sortOrder === 'nuevo' ? 'selected' : ''}>Más recientes primero</option>
+                        <option value="antiguo" ${this.sortOrder === 'antiguo' ? 'selected' : ''}>Más antiguos primero</option>
+                        <option value="destacados" ${this.sortOrder === 'destacados' ? 'selected' : ''}>Destacados</option>
+                    </select>
+                `;
+                container.parentNode.insertBefore(sortControl, container);
+                
+                // Añadir evento al nuevo selector
+                document.getElementById('sortOrder').addEventListener('change', (e) => {
+                    this.sortOrder = e.target.value;
+                    this.loadNodos();
+                });
+            }
+        }
 
-        this.nodosGrid.innerHTML = nodos.map(nodo => {
+        container.innerHTML = nodos.map(nodo => {
             const categoriaColor = this.getCategoryColor(nodo.categoria);
+            const fechaFormateada = nodo.fechaCreacion instanceof Date 
+                ? nodo.fechaCreacion.toLocaleDateString()
+                : 'Fecha desconocida';
             
             return `
-                <div class="card" data-id="${nodo.id}">
+                <div class="card ${nodo.destacado ? 'destacado' : ''}" data-id="${nodo.id}">
+                    ${nodo.destacado ? '<div class="destacado-badge" title="Contenido destacado">⭐</div>' : ''}
+                    ${!nodo.publico ? '<div class="privado-badge" title="Contenido privado">🔒</div>' : ''}
                     ${nodo.imagen ? `
                         <div class="card-media">
-                            <img src="${nodo.imagen}" alt="${nodo.titulo}" loading="lazy" onerror="this.src='https://placehold.co/600x400?text=Imagen+no+disponible'">
+                            <img src="${nodo.imagen}" alt="${nodo.titulo}" loading="lazy" onerror="this.onerror=null; this.src='img/logo-trimm-academy.png'; this.style.objectFit='contain'; this.style.backgroundColor='white';">
                             ${nodo.video ? '<span class="video-indicator">▶</span>' : ''}
                         </div>
                     ` : ''}
@@ -143,7 +388,11 @@ const nodosModule = {
                                 <span class="categoria-color-indicator" style="background-color: ${categoriaColor};"></span>
                                 ${nodo.categoria}
                             </span>
-                            ${nodo.url ? `<a href="${nodo.url}" target="_blank" class="btn-link">Ver más</a>` : ''}
+                            <span class="fecha-creacion">${fechaFormateada}</span>
+                        </div>
+                        <div class="card-stats">
+                            <span class="stat-item" title="Vistas"><i class="icon-eye"></i> <span class="count">${nodo.vistas || 0}</span></span>
+                            <span class="stat-item" title="Me gusta"><i class="icon-heart"></i> <span class="count">${nodo.likes || 0}</span></span>
                         </div>
                     </div>
                 </div>
@@ -151,12 +400,117 @@ const nodosModule = {
         }).join('');
 
         // Agregar evento click a las cards
-        this.nodosGrid.querySelectorAll('.card').forEach(card => {
-            card.addEventListener('click', () => {
+        container.querySelectorAll('.card').forEach(card => {
+            card.addEventListener('click', (e) => {
+                // Si el clic fue en un enlace, no abrir el modal
+                if (e.target.tagName === 'A' || e.target.closest('a')) {
+                    return;
+                }
+                
                 const nodo = nodos.find(n => n.id === card.dataset.id);
-                if (nodo) this.mostrarModalNodo(nodo);
+                if (nodo) {
+                    // Incrementar contador de vistas
+                    this.incrementViews(nodo.id);
+                    // Mostrar modal
+                    this.mostrarModalNodo(nodo);
+                }
             });
         });
+    },
+    
+    async incrementViews(nodoId) {
+        try {
+            const nodoRef = this.db.collection('nodos').doc(nodoId);
+            await nodoRef.update({
+                vistas: firebase.firestore.FieldValue.increment(1)
+            });
+
+            // Actualizar UI en el grid principal (y otras secciones si la tarjeta está duplicada)
+            document.querySelectorAll(`.card[data-id="${nodoId}"]`).forEach(cardInGrid => {
+                const vistasElement = cardInGrid.querySelector('.stat-item[title="Vistas"] span.count');
+                if (vistasElement) {
+                    const currentVistas = parseInt(vistasElement.textContent) || 0;
+                    vistasElement.textContent = currentVistas + 1;
+                }
+            });
+            
+            // Actualizar en el array local si existe
+            const updateLocalData = (arr) => {
+                if (arr) {
+                    const nodoLocal = arr.find(n => n.id === nodoId);
+                    if (nodoLocal) {
+                        nodoLocal.vistas = (nodoLocal.vistas || 0) + 1;
+                    }
+                }
+            };
+            updateLocalData(this.allNodos); // Para la lista principal
+            // Si tienes arrays separados para destacados/masVotados que se usan para renderizar,
+            // también deberías actualizarlos aquí o asegurar que se refresquen desde allNodos.
+
+        } catch (error) {
+            console.error('Error al incrementar vistas:', error);
+        }
+    },
+    
+    async voteTip(nodoId, voteType) {
+        try {
+            const votedTipsKey = 'votedRiggingTips';
+            let votedTips = JSON.parse(localStorage.getItem(votedTipsKey)) || [];
+
+            if (votedTips.includes(nodoId)) {
+                console.log('Este tip ya ha sido votado desde este navegador.');
+                return;
+            }
+
+            console.log('Añadiendo me gusta al tip:', nodoId);
+            const nodoRef = this.db.collection('nodos').doc(nodoId);
+            
+            const doc = await nodoRef.get();
+            if (!doc.exists) {
+                console.error('Error: El nodo no existe');
+                return;
+            }
+            
+            await nodoRef.update({
+                likes: firebase.firestore.FieldValue.increment(1)
+            });
+            
+            votedTips.push(nodoId);
+            localStorage.setItem(votedTipsKey, JSON.stringify(votedTips));
+
+            console.log('Like registrado correctamente');
+            
+            // Actualizar UI en todas partes (modal y grids)
+            const newLikesCount = (doc.data().likes || 0) + 1;
+
+            document.querySelectorAll(`.card[data-id="${nodoId}"]`).forEach(cardInGrid => {
+                const likeElementInGrid = cardInGrid.querySelector('.stat-item[title="Me gusta"] span.count');
+                if (likeElementInGrid) {
+                    likeElementInGrid.textContent = newLikesCount;
+                }
+            });
+
+            const modalInstance = document.querySelector(`.modal .vote-btn.like-btn[data-id="${nodoId}"]`);
+            if (modalInstance) {
+                modalInstance.innerHTML = `<i class="icon-heart"></i> ${newLikesCount}`;
+                modalInstance.disabled = true;
+                modalInstance.classList.add('voted');
+            }
+            
+            // Actualizar en el array local si existe
+            const updateLocalLikes = (arr) => {
+                if (arr) {
+                    const nodoLocalLike = arr.find(n => n.id === nodoId);
+                    if (nodoLocalLike) {
+                        nodoLocalLike.likes = newLikesCount;
+                    }
+                }
+            };
+            updateLocalLikes(this.allNodos);
+
+        } catch (error) {
+            console.error('Error al dar me gusta:', error);
+        }
     },
 
     mostrarModalNodo(nodo) {
@@ -168,6 +522,9 @@ const nodosModule = {
         modal.className = 'modal';
         
         const categoriaColor = this.getCategoryColor(nodo.categoria);
+        const fechaFormateada = nodo.fechaCreacion instanceof Date 
+            ? nodo.fechaCreacion.toLocaleDateString()
+            : 'Fecha desconocida';
         
         let mediaHtml = '';
         if (nodo.video) {
@@ -179,20 +536,51 @@ const nodosModule = {
         modal.innerHTML = `
             <button class="close-btn" onclick="document.body.removeChild(this.parentNode.parentNode)">&times;</button>
             ${mediaHtml}
-            <h3>${nodo.titulo}</h3>
+            <h3>${nodo.titulo} ${nodo.destacado ? '<span class="destacado-badge-small">⭐</span>' : ''}</h3>
             <p>${nodo.descripcion}</p>
             ${nodo.contenido ? `<div class="contenido">${nodo.contenido}</div>` : ''}
+            
+            <div class="modal-stats">
+                <span class="stat-item" title="Vistas"><i class="icon-eye"></i> ${nodo.vistas}</span>
+                <div class="vote-buttons">
+                    <button class="vote-btn like-btn" data-id="${nodo.id}" data-vote="like" title="Me gusta">
+                        <i class="icon-heart"></i> ${nodo.likes || 0}
+                    </button>
+                </div>
+            </div>
+            
             <div class="modal-footer">
-                <span class="categoria-tag" style="background-color: ${categoriaColor}20; color: ${categoriaColor}; border: 1px solid ${categoriaColor};">
-                    <span class="categoria-color-indicator" style="background-color: ${categoriaColor};"></span>
-                    ${nodo.categoria}
-                </span>
-                ${nodo.url ? `<a href="${nodo.url}" target="_blank" class="btn-primary">Ver recurso completo</a>` : ''}
+                <div class="modal-footer-left">
+                    <span class="categoria-tag" style="background-color: ${categoriaColor}20; color: ${categoriaColor}; border: 1px solid ${categoriaColor};">
+                        <span class="categoria-color-indicator" style="background-color: ${categoriaColor};"></span>
+                        ${nodo.categoria}
+                    </span>
+                    <span class="fecha-creacion">${fechaFormateada}</span>
+                </div>
+                <div class="modal-footer-right">
+                    ${nodo.url ? `<a href="${nodo.url}" target="_blank" class="btn-primary">Ver recurso completo</a>` : ''}
+                </div>
             </div>
         `;
 
         modalBg.appendChild(modal);
         document.body.appendChild(modalBg);
+        
+        // Añadir event listeners para el botón de me gusta
+        const likeBtn = modal.querySelector('.like-btn');
+        
+        const votedTipsKey = 'votedRiggingTips';
+        let votedTips = JSON.parse(localStorage.getItem(votedTipsKey)) || [];
+        if (votedTips.includes(nodo.id)) {
+            likeBtn.disabled = true;
+            likeBtn.classList.add('voted');
+        }
+
+        likeBtn.addEventListener('click', () => {
+            this.voteTip(nodo.id, 'like');
+            // El estado disabled/voted se manejará ahora dentro de voteTip si el voto es exitoso
+            // o al recargar el modal si ya estaba votado.
+        });
     }
 };
 

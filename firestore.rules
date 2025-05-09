@@ -17,6 +17,15 @@ service cloud.firestore {
              data.categoria is string;
     }
 
+    // Validación para actualización parcial de nodos (likes, vistas, etc.)
+    function isPartialUpdate() {
+      let allowedFields = ['likes', 'vistas', 'destacado', 'actualizado'];
+      let data = request.resource.data;
+      
+      // Verificar que solo se estén actualizando los campos permitidos
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowedFields);
+    }
+
     // Validación de datos para categorías
     function isValidCategoria() {
       let data = request.resource.data;
@@ -35,8 +44,8 @@ service cloud.firestore {
     match /nodos/{document=**} {
       allow read: if true;  // Lectura pública
       allow create: if isAdmin() && isValidNodo();
-      allow update: if isAdmin() && isValidNodo();
-      allow delete: if isAdmin();
+      allow update: if request.auth != null && (isAdmin() || isOwner()) && isPartialUpdate();
+      allow delete: if request.auth != null;
     }
 
     // Reglas para la colección de categorías
