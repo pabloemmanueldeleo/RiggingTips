@@ -33,6 +33,11 @@ service cloud.firestore {
     // ---------- Reglas para nodos ----------
     match /nodos/{nodoId} {
       allow read: if true;
+      // Permitir solo el incremento de likes a cualquier usuario
+      allow update: if (
+        request.resource.data.keys().hasOnly(['likes']) &&
+        request.resource.data.likes == resource.data.likes + 1
+      ) || isAdmin();
       allow write: if isAdmin();
     }
 

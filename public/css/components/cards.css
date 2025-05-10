@@ -1,82 +1,175 @@
 .card {
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    margin: 1rem;
+    position: relative;
+    width: 100%;
+    min-width: 260px;
+    min-height: 320px;
+    aspect-ratio: 1/1.1;
+    border-radius: 18px;
     overflow: hidden;
-    transition: transform 0.2s ease-in-out;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.10), 0 1.5px 6px rgba(0,0,0,0.08);
+    background: #181818;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    transition: transform 0.18s cubic-bezier(.4,2,.6,1), box-shadow 0.18s;
+    cursor: pointer;
 }
 
 .card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    transform: scale(1.045) translateY(-4px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.18), 0 3px 12px rgba(0,0,0,0.12);
+    z-index: 2;
 }
 
-.card-header {
-    padding: 1rem;
-    border-bottom: 1px solid #eee;
+.card-media {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    width: 100%; height: 100%;
+    z-index: 1;
+    background: #222;
+}
+
+.card-media img, .card-media video {
+    width: 100%; height: 100%; object-fit: cover;
+    display: block;
+}
+
+.card-content {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    z-index: 2;
+    background: linear-gradient(0deg, rgba(24,24,24,0.92) 90%, rgba(24,24,24,0.0) 100%);
+    padding: 1em 1em 0.7em 1em;
+    border-bottom-left-radius: 18px;
+    border-bottom-right-radius: 18px;
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.card-header h3 {
-    margin: 0;
-    font-size: 1.2rem;
-    color: #333;
-}
-
-.categoria-badge {
-    background: #f0f0f0;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    font-size: 0.8rem;
-    color: #666;
-}
-
-.card-body {
-    padding: 1rem;
-}
-
-.card-body p {
-    margin: 0;
-    color: #666;
-    line-height: 1.5;
-}
-
-.card-footer {
-    padding: 1rem;
-    border-top: 1px solid #eee;
-    display: flex;
+    flex-direction: column;
     justify-content: flex-end;
 }
 
-.card-footer .btn {
-    text-decoration: none;
-    padding: 0.5rem 1rem;
-    border-radius: 4px;
+.card-content h3 {
+    margin: 0 0 0.15em 0;
+    font-size: 1.13em;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.1;
+}
+
+.card-content p {
+    margin: 0 0 0.5em 0;
+    font-size: 0.98em;
+    color: #e0e0e0;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-height: 1.3em;
+    max-width: 100%;
+    white-space: nowrap;
+}
+
+.card-footer {
+    display: flex;
+    align-items: center;
+    gap: 0.7em;
+    font-size: 0.95em;
+    margin-top: 0.2em;
+}
+
+.categoria-tag {
+    padding: 0.18em 0.7em;
+    border-radius: 12px;
+    font-size: 0.92em;
     font-weight: 500;
-}
-
-.btn-primary {
-    background: #007bff;
-    color: white;
+    background: rgba(0,0,0,0.18);
+    color: #fff;
     border: none;
+    margin-right: 0.3em;
 }
 
-.btn-primary:hover {
-    background: #0056b3;
+.card-stats {
+    display: flex;
+    gap: 0.7em;
+    font-size: 0.98em;
+    color: #fff;
+    align-items: center;
+    margin-top: 0.2em;
+    margin-bottom: 0;
+    padding-bottom: 0.1em;
+    justify-content: flex-start;
 }
 
-.visibility-indicator {
-    font-size: 1.2rem;
-    margin-left: 0.5rem;
+.card-stats .stat-item {
+    display: flex;
+    align-items: center;
+    gap: 0.25em;
 }
 
-.visibility-indicator .visible {
-    color: #28a745;
+.card-stats .icon-eye,
+.card-stats .icon-heart {
+    font-size: 1.1em;
+    margin-right: 0.1em;
 }
 
-.visibility-indicator .hidden {
-    color: #dc3545;
+.card .floating-btns {
+    position: absolute;
+    top: 0.7em;
+    right: 0.7em;
+    z-index: 3;
+    display: flex;
+    gap: 0.5em;
+}
+
+.floating-btn {
+    background: rgba(24,24,24,0.62);
+    border: none;
+    border-radius: 50%;
+    width: 2.2em;
+    height: 2.2em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 1.15em;
+    cursor: pointer;
+    transition: background 0.18s;
+}
+
+.floating-btn:hover {
+    background: #ffd600;
+    color: #181818;
+}
+
+.card .card-label {
+    position: absolute;
+    top: 0.7em;
+    left: 0.7em;
+    z-index: 3;
+    background: rgba(24,24,24,0.62);
+    color: #fff;
+    font-size: 0.92em;
+    font-weight: 600;
+    padding: 0.18em 0.8em;
+    border-radius: 10px;
+    letter-spacing: 0.02em;
+}
+
+.nodos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 2.1em;
+    margin-top: 2em;
+}
+
+@media (max-width: 700px) {
+    .nodos-grid {
+        grid-template-columns: 1fr;
+        gap: 1.2em;
+    }
+    .card {
+        min-width: 90vw;
+        min-height: 220px;
+        aspect-ratio: 1/1.2;
+    }
 } 

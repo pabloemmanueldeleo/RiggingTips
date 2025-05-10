@@ -104,27 +104,22 @@ const nodosModule = {
         try {
             // Cargar destacados primero
             await this.loadDestacados();
-            
             // Cargar los más votados
             await this.loadMasVotados();
-            
             // Cargar el resto de nodos para la sección "Todos los Tips"
             let query = this.db.collection('nodos').where('publico', '==', true); // Asegurar que solo se carguen tips públicos
-            
             if (this.currentFilter) {
+                // Filtrar por id de categoría, no por nombre
                 query = query.where('categoria', '==', this.currentFilter);
             }
-            
             // Ordenar por fecha
             if (this.sortOrder === 'nuevo') {
                 query = query.orderBy('fechaCreacion', 'desc');
             } else if (this.sortOrder === 'antiguo') {
                 query = query.orderBy('fechaCreacion', 'asc');
             } else if (this.sortOrder === 'destacados') {
-                // Si se ordena por destacados, además de ser público, debe ser destacado
                 query = query.where('destacado', '==', true).orderBy('fechaCreacion', 'desc');
             }
-
             const snapshot = await query.get();
             const nodos = snapshot.docs.map(doc => {
                 const data = doc.data();
@@ -145,7 +140,6 @@ const nodosModule = {
                     vistas: data.vistas || 0
                 };
             });
-
             this.allNodos = nodos;
             this.renderNodos(nodos, this.nodosGrid);
         } catch (error) {
@@ -334,12 +328,10 @@ const nodosModule = {
 
     renderNodos(nodos, container) {
         if (!container) return;
-
         if (nodos.length === 0) {
             container.innerHTML = '<p class="no-results">No se encontraron tips. ¡Sé el primero en compartir uno!</p>';
             return;
         }
-        
         // Crear controles de ordenamiento si no existen y es el contenedor principal
         if (container === this.nodosGrid) {
             let sortControlExists = document.querySelector('.sort-control');
@@ -355,63 +347,48 @@ const nodosModule = {
                     </select>
                 `;
                 container.parentNode.insertBefore(sortControl, container);
-                
-                // Añadir evento al nuevo selector
                 document.getElementById('sortOrder').addEventListener('change', (e) => {
                     this.sortOrder = e.target.value;
                     this.loadNodos();
                 });
             }
         }
-
         container.innerHTML = nodos.map(nodo => {
             const categoriaColor = this.getCategoryColor(nodo.categoria);
             const fechaFormateada = nodo.fechaCreacion instanceof Date 
                 ? nodo.fechaCreacion.toLocaleDateString()
                 : 'Fecha desconocida';
-            
             return `
                 <div class="card ${nodo.destacado ? 'destacado' : ''}" data-id="${nodo.id}">
-                    ${nodo.destacado ? '<div class="destacado-badge" title="Contenido destacado">⭐</div>' : ''}
-                    ${!nodo.publico ? '<div class="privado-badge" title="Contenido privado">🔒</div>' : ''}
-                    ${nodo.imagen ? `
-                        <div class="card-media">
-                            <img src="${nodo.imagen}" alt="${nodo.titulo}" loading="lazy" onerror="this.onerror=null; this.src='img/logo-trimm-academy.png'; this.style.objectFit='contain'; this.style.backgroundColor='white';">
-                            ${nodo.video ? '<span class="video-indicator">▶</span>' : ''}
-                        </div>
-                    ` : ''}
+                    <div class="card-media">
+                        <img src="${nodo.imagen}" alt="${nodo.titulo}" loading="lazy" onerror="this.onerror=null; this.src='img/Trimm__logo_cuadrado_B.png'; this.style.objectFit='contain'; this.style.backgroundColor='white';">
+                    </div>
+                    <div class="card-label" style="background: ${categoriaColor}cc;">${nodo.categoria}</div>
                     <div class="card-content">
                         <h3>${nodo.titulo}</h3>
                         <p>${nodo.descripcion}</p>
-                        <div class="card-footer">
-                            <span class="categoria-tag" style="background-color: ${categoriaColor}20; color: ${categoriaColor}; border: 1px solid ${categoriaColor};">
-                                <span class="categoria-color-indicator" style="background-color: ${categoriaColor};"></span>
-                                ${nodo.categoria}
-                            </span>
-                            <span class="fecha-creacion">${fechaFormateada}</span>
-                        </div>
                         <div class="card-stats">
                             <span class="stat-item" title="Vistas"><i class="icon-eye"></i> <span class="count">${nodo.vistas || 0}</span></span>
-                            <span class="stat-item" title="Me gusta"><i class="icon-heart"></i> <span class="count">${nodo.likes || 0}</span></span>
+                            <button class="vote-btn like-btn stat-item" title="Me gusta"><i class="icon-heart"></i> <span class="count">${nodo.likes || 0}</span></button>
                         </div>
                     </div>
                 </div>
             `;
         }).join('');
-
-        // Agregar evento click a las cards
+        // Eventos para feedback visual y acciones
         container.querySelectorAll('.card').forEach(card => {
-            card.addEventListener('click', (e) => {
-                // Si el clic fue en un enlace, no abrir el modal
-                if (e.target.tagName === 'A' || e.target.closest('a')) {
-                    return;
-                }
-                
+            card.querySelector('.vote-btn.like-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
                 const nodo = nodos.find(n => n.id === card.dataset.id);
                 if (nodo) {
-                    // Incrementar contador de vistas
+                    this.voteTip(nodo.id, 'like');
+                }
+            });
+            card.addEventListener('click', (e) => {
+                if (e.target.classList.contains('vote-btn')) return;
+                const nodo = nodos.find(n => n.id === card.dataset.id);
+                if (nodo) {
                     this.incrementViews(nodo.id);
-                    // Mostrar modal
                     this.mostrarModalNodo(nodo);
                 }
             });

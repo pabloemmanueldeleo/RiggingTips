@@ -61,12 +61,12 @@ const categoriasModule = {
 
         // Crear botones de categoría con contadores
         for (const categoria of this.categorias) {
-            const count = await this.getCategoryCount(categoria.nombre);
+            const count = await this.getCategoryCount(categoria.id);
             const colorHex = categoria.color || '#666';
             
             botonesHtml += `
                 <button class="categoria-btn" 
-                        data-categoria="${categoria.nombre}"
+                        data-categoria="${categoria.id}"
                         style="--categoria-color: ${colorHex}; background-color: ${colorHex}20; border-color: ${colorHex};">
                     ${categoria.nombre}
                     <span class="category-count">${count}</span>
