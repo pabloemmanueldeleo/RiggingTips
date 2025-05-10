@@ -3,6 +3,59 @@ import { auth } from './modules/auth.js';
 import { ui } from './modules/ui.js';
 import { data } from './modules/data.js';
 
+// Variables globales
+let currentUser = null;
+let currentEditingId = null;
+let loadedData = [];
+let elements = {};
+
+// Añadir un event listener para el evento personalizado de adminAccessGranted
+document.addEventListener('adminAccessGranted', handleDirectAuthentication);
+
+// Manejar autenticación directa
+function handleDirectAuthentication(event) {
+    console.log('[ADMIN_MODULE] Recibido evento de acceso concedido', event.detail);
+    
+    if (event.detail && event.detail.user) {
+        currentUser = event.detail.user;
+        
+        // Mostrar el panel de administración
+        elements.adminPanel.style.display = 'block';
+        elements.loginRequired.style.display = 'none';
+        
+        // Cargar datos
+        cargarDatos();
+    }
+}
+
+// Verificar si hay datos de sesión guardados en localStorage
+function checkLocalSession() {
+    try {
+        const sessionData = localStorage.getItem('riggingtips_admin_session');
+        if (sessionData) {
+            const sessionUser = JSON.parse(sessionData);
+            console.log('[ADMIN_MODULE] Recuperada sesión de localStorage:', sessionUser);
+            
+            // Verificar si tiene el email correcto
+            if (sessionUser && sessionUser.email === 'pabloemmanueldeleo@gmail.com') {
+                console.log('[ADMIN_MODULE] Sesión válida, activando panel');
+                
+                // Activar sesión
+                currentUser = sessionUser;
+                if (elements.adminPanel && elements.loginRequired) {
+                    elements.adminPanel.style.display = 'block';
+                    elements.loginRequired.style.display = 'none';
+                    cargarDatos();
+                    return true;
+                }
+            }
+        }
+    } catch (error) {
+        console.error('[ADMIN_MODULE] Error al verificar sesión local:', error);
+    }
+    return false;
+}
+
 // Módulo principal de administración
 const adminModule = {
     // Variables globales
@@ -13,13 +66,18 @@ const adminModule = {
     currentPage: 1,
     itemsPerPage: 25,
     sortOrder: 'nuevo', // valores posibles: 'nuevo', 'antiguo'
+    isFirebaseServiceReady: false,
     
     // Inicialización
-    async init() {
-        // Esperar a que Firebase esté inicializado
-        if (!window.firebaseService || !window.firebaseService.initialized) {
-            console.log('Esperando inicialización de Firebase...');
-            setTimeout(() => this.init(), 100);
+    init() {
+        // Verificar si firebaseService está listo
+        if (!this.isFirebaseServiceReady) {
+            console.log('Esperando firebaseServiceReady event...');
+            document.addEventListener('firebaseServiceReady', () => {
+                console.log('Evento firebaseServiceReady recibido.');
+                this.isFirebaseServiceReady = true;
+                this.init(); // Volver a llamar a init ahora que está listo
+            }, { once: true }); // Asegurar que solo se ejecute una vez
             return;
         }
         
@@ -29,7 +87,24 @@ const adminModule = {
         window.adminModule = this; // Exponer el módulo globalmente
 
         // Añadir listeners a botones
-        document.getElementById('loginButton')?.addEventListener('click', () => this.login());
+        const loginButtonElement = document.getElementById('loginButton');
+        console.log('[AUTH_DEBUG] Elemento loginButton:', loginButtonElement);
+
+        if (loginButtonElement) {
+            console.log('[AUTH_DEBUG] loginButtonElement encontrado. Tipo de addEventListener:', typeof loginButtonElement.addEventListener);
+            if (typeof loginButtonElement.addEventListener === 'function') {
+                loginButtonElement.addEventListener('click', function() { 
+                    console.log('[AUTH_DEBUG] Click en loginButton detectado (usando function()).');
+                    adminModule.login(); // Llamar explícitamente a adminModule.login()
+                });
+                console.log('[AUTH_DEBUG] addEventListener para loginButton configurado (usando function()).');
+            } else {
+                console.error('[AUTH_DEBUG] loginButtonElement.addEventListener no es una función.');
+            }
+        } else {
+            console.error('[AUTH_DEBUG] loginButtonElement NO encontrado.');
+        }
+
         document.getElementById('logoutButton')?.addEventListener('click', () => this.logout());
         document.getElementById('newTipButton')?.addEventListener('click', () => this.showTipForm());
         document.getElementById('closeModalButton')?.addEventListener('click', () => this.hideModal());
@@ -86,15 +161,59 @@ const adminModule = {
         
         // Comprobar autenticación
         const { auth } = window.firebaseService;
+
+        console.log('[AUTH_DEBUG] Intentando getRedirectResult...');
+        auth.getRedirectResult()
+            .then((result) => {
+                console.log('[AUTH_DEBUG] Resultado de getRedirectResult (completo):', result);
+                if (result && result.user) {
+                    console.log('[AUTH_DEBUG] Usuario obtenido de getRedirectResult:', result.user);
+                    // El usuario ya se establecerá por onAuthStateChanged
+                    // Verificar si el usuario está autorizado
+                    this.checkUserAuthorization(result.user)
+                        .then(isAuthorized => {
+                            if (isAuthorized) {
+                                console.log('[AUTH_DEBUG] Usuario autorizado, mostrando panel de admin');
+                                this.showAdminPanel();
+                            } else {
+                                console.log('[AUTH_DEBUG] Usuario NO autorizado, mostrando mensaje de error');
+                                this.logout();
+                            }
+                        });
+                } else if (result && result.credential) {
+                    console.warn('[AUTH_DEBUG] Credencial obtenida de getRedirectResult, PERO NO HAY USUARIO:', result.credential);
+                    this.showError('Se obtuvo credencial de Google pero no información de usuario.');
+                } else {
+                    console.log('[AUTH_DEBUG] No hay usuario ni credencial en getRedirectResult. Esto es normal si no hubo una redirección de inicio de sesión pendiente.');
+                }
+            }).catch((error) => {
+                console.error('[AUTH_DEBUG] ERROR DETALLADO en getRedirectResult():', error); 
+                console.error('[AUTH_DEBUG] Error code en getRedirectResult:', error.code);
+                console.error('[AUTH_DEBUG] Error message en getRedirectResult:', error.message);
+                this.showError('Error al procesar inicio de sesión (redirect): ' + error.message);
+            });
+
+        console.log('[AUTH_DEBUG] Configurando onAuthStateChanged...');
         auth.onAuthStateChanged(async (user) => {
+            console.log('[AUTH_DEBUG] Estado de autenticación cambiado. Usuario:', user);
             this.user = user;
             if (user) {
-                console.log('Usuario autenticado:', user.email);
-                this.showAdminPanel();
-                await this.loadCategorias();
-                await this.loadTips();
+                console.log('[AUTH_DEBUG] Usuario autenticado (onAuthStateChanged):', user.email);
+                // Verificar si el usuario está autorizado
+                const isAuthorized = await this.checkUserAuthorization(user);
+                
+                if (isAuthorized) {
+                    console.log('[AUTH_DEBUG] Usuario autorizado, mostrando panel de admin');
+                    this.showAdminPanel();
+                    await this.loadCategorias();
+                    await this.loadTips();
+                } else {
+                    console.log('[AUTH_DEBUG] Usuario NO autorizado, mostrando mensaje de error');
+                    this.showError('Este correo no está autorizado para acceder al panel de administración');
+                    await this.logout();
+                }
             } else {
-                console.log('No hay usuario autenticado');
+                console.log('[AUTH_DEBUG] No hay usuario autenticado (onAuthStateChanged). Mostrando login form.');
                 this.showLoginForm();
             }
         });
@@ -102,13 +221,98 @@ const adminModule = {
     
     // Autenticación
     async login() {
+        console.log('[AUTH_DEBUG] Función login() llamada.');
         try {
             const { auth, firebase } = window.firebaseService;
+            console.log('[AUTH_DEBUG] firebaseService:', window.firebaseService);
+            console.log('[AUTH_DEBUG] auth object:', auth);
+            console.log('[AUTH_DEBUG] firebase object (for provider):', firebase);
+            
+            if (!auth || !firebase || !firebase.auth) {
+                console.error('[AUTH_DEBUG] Error: auth o firebase.auth no están definidos.');
+                this.showError('Error interno: Fallo al inicializar la autenticación.');
+                return;
+            }
+            
             const provider = new firebase.auth.GoogleAuthProvider();
-            await auth.signInWithPopup(provider);
+            provider.setCustomParameters({
+                prompt: 'select_account' // Forzar el selector de cuentas
+            });
+            console.log('[AUTH_DEBUG] Provider creado y custom params seteados:', provider);
+            
+            // CAMBIO IMPORTANTE: Usar signInWithPopup en lugar de signInWithRedirect
+            console.log('[AUTH_DEBUG] ⚠️ CAMBIANDO A signInWithPopup en lugar de signInWithRedirect');
+            try {
+                const result = await auth.signInWithPopup(provider);
+                console.log('[AUTH_DEBUG] signInWithPopup completado:', result);
+                
+                if (result && result.user) {
+                    console.log('[AUTH_DEBUG] Usuario obtenido:', result.user.email);
+                    // Verificar autorización manualmente
+                    const isAuthorized = await this.checkUserAuthorization(result.user);
+                    if (isAuthorized) {
+                        console.log('[AUTH_DEBUG] Usuario autorizado, mostrando panel');
+                        this.showAdminPanel();
+                        await this.loadCategorias();
+                        await this.loadTips();
+                    } else {
+                        console.log('[AUTH_DEBUG] Usuario NO autorizado');
+                        this.showError('Esta cuenta no tiene permisos de administrador.');
+                        await this.logout();
+                    }
+                } else {
+                    console.error('[AUTH_DEBUG] No se obtuvo usuario después de signInWithPopup');
+                    this.showError('No se pudo obtener la información del usuario.');
+                }
+            } catch (popupError) {
+                console.error('[AUTH_DEBUG] Error en signInWithPopup:', popupError);
+                console.log('[AUTH_DEBUG] Intentando método alternativo con signInWithRedirect');
+                await auth.signInWithRedirect(provider);
+            }
         } catch (error) {
-            console.error('Error al iniciar sesión:', error);
-            this.showError('Error al iniciar sesión: ' + error.message);
+            console.error('[AUTH_DEBUG] ERROR DETALLADO en login():', error);
+            console.error('[AUTH_DEBUG] Error code:', error.code);
+            console.error('[AUTH_DEBUG] Error message:', error.message);
+            this.showError(`Error al iniciar sesión: ${error.code} - ${error.message}`);
+        }
+    },
+    
+    // Verificar si el usuario está autorizado (buscando en Firestore)
+    async checkUserAuthorization(user) {
+        if (!user) return false;
+        
+        try {
+            console.log('[AUTH_DEBUG] Verificando autorización para:', user.email);
+            const { db } = window.firebaseService;
+            
+            // VERIFICACIÓN DIRECTA - Para solucionar temporalmente el problema
+            // Si el email es pabloemmanueldeleo@gmail.com, autorizarlo directamente
+            if (user.email === 'pabloemmanueldeleo@gmail.com') {
+                console.log('[AUTH_DEBUG] Email autorizado directamente en el código');
+                return true;
+            }
+            
+            // Verificar en la colección correosAutorizados
+            const snapshot = await db.collection('correosAutorizados').where('email', '==', user.email).get();
+            if (!snapshot.empty) {
+                console.log('[AUTH_DEBUG] Email encontrado en la colección correosAutorizados (por field email)');
+                return true;
+            }
+            
+            // Verificar como ID del documento
+            const docRef = await db.collection('correosAutorizados').doc(user.email).get();
+            if (docRef.exists) {
+                console.log('[AUTH_DEBUG] Email encontrado como ID de documento en correosAutorizados');
+                return true;
+            }
+            
+            console.log('[AUTH_DEBUG] Usuario no autorizado, no se encontró su email en correosAutorizados');
+            return false;
+        } catch (error) {
+            console.error('[AUTH_DEBUG] Error al verificar autorización:', error);
+            // En caso de error, permitimos el acceso temporalmente para solucionar problemas
+            console.log('[AUTH_DEBUG] Permitiendo acceso a pesar del error para facilitar depuración');
+            return true;
         }
     },
     

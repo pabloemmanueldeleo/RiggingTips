@@ -4,28 +4,28 @@
     ".write": false,
     "nodos": {
       ".read": true,
-      ".write": "auth != null && root.child('correosAutorizados').child(auth.token.email.replace('.', '_')).exists()"
+      ".write": "auth != null && root.child('correosAutorizados').child(auth.token.email.replace('.', '_').replace('@', '_')).exists()"
     },
     "correosAutorizados": {
       ".read": "auth != null",
-      ".write": "auth != null && root.child('correosAutorizados').child(auth.token.email.replace('.', '_')).exists()",
+      ".write": "auth != null && root.child('correosAutorizados').child(auth.token.email.replace('.', '_').replace('@', '_')).exists()",
       "$email": {
         ".validate": "newData.isBoolean()"
       }
     },
     "tips": {
       ".read": true,
-      ".write": "auth != null && root.child('correosAutorizados').child(auth.token.email.replace('.', '_')).exists()",
+      ".write": "auth != null && root.child('correosAutorizados').child(auth.token.email.replace('.', '_').replace('@', '_')).exists()",
       "categorias": {
         ".read": true,
-        ".write": "auth != null && root.child('correosAutorizados').child(auth.token.email.replace('.', '_')).exists()"
+        ".write": "auth != null && root.child('correosAutorizados').child(auth.token.email.replace('.', '_').replace('@', '_')).exists()"
       },
       "contenido": {
         ".read": true,
-        ".write": "auth != null && root.child('correosAutorizados').child(auth.token.email.replace('.', '_')).exists()",
+        ".write": "auth != null && root.child('correosAutorizados').child(auth.token.email.replace('.', '_').replace('@', '_')).exists()",
         "$categoria": {
           ".read": true,
-          ".write": "auth != null && root.child('correosAutorizados').child(auth.token.email.replace('.', '_')).exists()"
+          ".write": "auth != null && root.child('correosAutorizados').child(auth.token.email.replace('.', '_').replace('@', '_')).exists()"
         }
       }
     }

@@ -18,6 +18,215 @@
     <!-- Environment Variables y Firebase Config -->
     <script src="../js/env.js"></script>
     <script src="../js/firebase-service.js"></script>
+    
+    <!-- Script de autenticación con Google -->
+    <script>
+        // Inicialización de autenticación mejorada
+        window.addEventListener('DOMContentLoaded', function() {
+            console.log('[AUTH_GOOGLE] Inicializando autenticación con Google...');
+            
+            // Función para verificar si un usuario es administrador
+            function isAdminUser(email) {
+                return window.ADMIN_EMAILS && window.ADMIN_EMAILS.includes(email);
+            }
+            
+            // Esperar a que Firebase esté listo
+            const checkFirebase = setInterval(function() {
+                if (window.firebaseService && window.firebaseService.initialized) {
+                    clearInterval(checkFirebase);
+                    
+                    const auth = window.firebaseService.auth;
+                    const firebase = window.firebaseService.firebase;
+                    console.log('[AUTH_GOOGLE] Firebase inicializado, configurando autenticación...');
+                    
+                    // Verificar si ya hay un usuario autenticado
+                    const currentUser = auth.currentUser;
+                    if (currentUser) {
+                        console.log('[AUTH_GOOGLE] Usuario ya autenticado:', currentUser.email);
+                        
+                        // Si es un administrador autorizado, mostrar panel directamente
+                        if (isAdminUser(currentUser.email)) {
+                            showAdminPanel();
+                            return;
+                        }
+                    }
+                    
+                    // Configurar botón de login con Google
+                    const loginButton = document.getElementById('loginButton');
+                    if (loginButton) {
+                        // Remover eventos previos
+                        const newLoginButton = loginButton.cloneNode(true);
+                        loginButton.parentNode.replaceChild(newLoginButton, loginButton);
+                        
+                        // Añadir nuevo evento
+                        newLoginButton.addEventListener('click', function() {
+                            console.log('[AUTH_GOOGLE] Iniciando login con Google...');
+                            document.getElementById('loginMessage').textContent = 'Iniciando sesión con Google...';
+                            document.getElementById('loginMessage').style.display = 'block';
+                            
+                            // Crear provider de Google
+                            const provider = new firebase.auth.GoogleAuthProvider();
+                            provider.setCustomParameters({
+                                prompt: 'select_account'
+                            });
+                            
+                            // Primero intentar con popup
+                            auth.signInWithPopup(provider)
+                                .then(function(result) {
+                                    console.log('[AUTH_GOOGLE] Login exitoso con popup:', result.user?.email);
+                                    
+                                    // Verificar si es un administrador autorizado
+                                    if (result.user && isAdminUser(result.user.email)) {
+                                        console.log('[AUTH_GOOGLE] Usuario es administrador, mostrando panel');
+                                        showAdminPanel();
+                                        
+                                        // Crear entrada en correosAutorizados si no existe
+                                        createAdminDocument(result.user.email);
+                                    } else {
+                                        console.log('[AUTH_GOOGLE] Usuario no es administrador:', result.user?.email);
+                                        document.getElementById('loginMessage').textContent = 'Error: Correo no autorizado';
+                                        auth.signOut();
+                                    }
+                                })
+                                .catch(function(error) {
+                                    console.log('[AUTH_GOOGLE] Error en popup, intentando con redirect');
+                                    console.error('[AUTH_GOOGLE] Error popup:', error);
+                                    
+                                    // Si falla el popup, intentar con redirect
+                                    try {
+                                        auth.signInWithRedirect(provider);
+                                    } catch (redirectError) {
+                                        console.error('[AUTH_GOOGLE] Error también en redirect:', redirectError);
+                                        document.getElementById('loginMessage').textContent = 'Error de autenticación. Intenta de nuevo.';
+                                    }
+                                });
+                        });
+                    }
+                    
+                    // Verificar resultado de redirect
+                    auth.getRedirectResult()
+                        .then(function(result) {
+                            console.log('[AUTH_GOOGLE] Resultado de redirect:', result?.user?.email || 'No hay usuario');
+                            
+                            if (result && result.user) {
+                                // Verificar si es un administrador autorizado
+                                if (isAdminUser(result.user.email)) {
+                                    console.log('[AUTH_GOOGLE] Usuario es administrador (redirect), mostrando panel');
+                                    showAdminPanel();
+                                    
+                                    // Crear entrada en correosAutorizados si no existe
+                                    createAdminDocument(result.user.email);
+                                } else {
+                                    console.log('[AUTH_GOOGLE] Usuario no es administrador (redirect):', result.user.email);
+                                    document.getElementById('loginMessage').textContent = 'Error: Correo no autorizado';
+                                    auth.signOut();
+                                }
+                            }
+                        })
+                        .catch(function(error) {
+                            console.error('[AUTH_GOOGLE] Error en getRedirectResult:', error);
+                        });
+                    
+                    // Escuchar cambios en autenticación
+                    auth.onAuthStateChanged(function(user) {
+                        console.log('[AUTH_GOOGLE] Estado de autenticación cambiado:', user?.email || 'No hay usuario');
+                        
+                        if (user) {
+                            // Verificar si es un administrador autorizado
+                            if (isAdminUser(user.email)) {
+                                console.log('[AUTH_GOOGLE] Usuario administrador detectado, mostrando panel');
+                                showAdminPanel();
+                                
+                                // Crear entrada en correosAutorizados si no existe
+                                createAdminDocument(user.email);
+                            } else {
+                                console.log('[AUTH_GOOGLE] Usuario no autorizado:', user.email);
+                                document.getElementById('loginMessage').textContent = 'Error: Correo no autorizado';
+                                auth.signOut();
+                            }
+                        } else {
+                            console.log('[AUTH_GOOGLE] No hay usuario autenticado');
+                            hideAdminPanel();
+                        }
+                    });
+                }
+            }, 100);
+            
+            // Función para crear entrada de administrador en Firestore
+            function createAdminDocument(email) {
+                try {
+                    const db = window.firebaseService.db;
+                    const normalizedEmail = window.normalizeEmail(email);
+                    
+                    // Verificar en la base de datos realtime (para compatibilidad)
+                    const rtdb = window.firebaseService.rtdb;
+                    if (rtdb) {
+                        rtdb.ref('correosAutorizados/' + normalizedEmail).set(true)
+                        .then(function() {
+                            console.log('[AUTH_GOOGLE] Email autorizado guardado en RTDB');
+                        })
+                        .catch(function(error) {
+                            console.error('[AUTH_GOOGLE] Error al guardar en RTDB:', error);
+                        });
+                    }
+                    
+                    // Verificar también en Firestore
+                    db.collection('correosAutorizados').doc(email).get()
+                        .then(function(doc) {
+                            if (!doc.exists) {
+                                console.log('[AUTH_GOOGLE] Creando documento de administrador');
+                                
+                                db.collection('correosAutorizados').doc(email).set({
+                                    email: email,
+                                    normalizedEmail: normalizedEmail,
+                                    roles: ['admin'],
+                                    timestamp: new Date()
+                                })
+                                .then(function() {
+                                    console.log('[AUTH_GOOGLE] Documento de administrador creado exitosamente');
+                                })
+                                .catch(function(error) {
+                                    console.error('[AUTH_GOOGLE] Error al crear documento:', error);
+                                });
+                            } else {
+                                console.log('[AUTH_GOOGLE] Documento de administrador ya existe');
+                            }
+                        });
+                } catch (error) {
+                    console.error('[AUTH_GOOGLE] Error al verificar/crear documento:', error);
+                }
+            }
+            
+            // Funciones para mostrar/ocultar panel de administración
+            function showAdminPanel() {
+                document.getElementById('loginContainer').classList.add('hidden');
+                document.getElementById('adminPanel').classList.remove('hidden');
+                
+                // Disparar evento para inicializar datos del CRUD
+                document.dispatchEvent(new CustomEvent('adminDataReady'));
+            }
+            
+            function hideAdminPanel() {
+                document.getElementById('loginContainer').classList.remove('hidden');
+                document.getElementById('adminPanel').classList.add('hidden');
+            }
+        });
+    </script>
+    
+    <!-- Estilos adicionales para la interfaz -->
+    <style>
+        #loginMessage {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f5f5f5;
+            border-radius: 4px;
+            text-align: center;
+            display: none;
+        }
+        .hidden {
+            display: none !important;
+        }
+    </style>
 </head>
 <body>
     <div id="errorContainer"></div>
@@ -29,6 +238,7 @@
             <button id="loginButton" class="btn-primary">
                 Iniciar sesión con Google
             </button>
+            <div id="loginMessage"></div>
             <div style="margin-top: 20px; text-align: center;">
                 <p style="color: #666;">Solo usuarios autorizados pueden acceder a este panel</p>
             </div>
@@ -182,5 +392,32 @@
     
     <!-- Módulos de la aplicación -->
     <script type="module" src="js/admin.js"></script>
+    
+    <!-- Script CRUD para el panel de administración -->
+    <script src="js/admin-crud.js"></script>
+    
+    <!-- Script para manejo de logout -->
+    <script>
+        // Configurar botón de logout
+        document.addEventListener('DOMContentLoaded', function() {
+            const logoutButton = document.getElementById('logoutButton');
+            if (logoutButton) {
+                logoutButton.addEventListener('click', function() {
+                    console.log('[AUTH_GOOGLE] Cerrando sesión...');
+                    try {
+                        const auth = window.firebaseService.auth;
+                        auth.signOut().then(function() {
+                            console.log('[AUTH_GOOGLE] Sesión cerrada exitosamente');
+                            document.getElementById('loginContainer').classList.remove('hidden');
+                            document.getElementById('adminPanel').classList.add('hidden');
+                            document.getElementById('loginMessage').style.display = 'none';
+                        });
+                    } catch (error) {
+                        console.error('[AUTH_GOOGLE] Error al cerrar sesión:', error);
+                    }
+                });
+            }
+        });
+    </script>
 </body>
 </html> 
