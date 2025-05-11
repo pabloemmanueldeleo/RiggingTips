@@ -162,6 +162,12 @@
     margin-top: 2em;
 }
 
+.destacados-section .nodos-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2.1em;
+    min-height: 340px;
+}
+
 @media (max-width: 700px) {
     .nodos-grid {
         grid-template-columns: 1fr;

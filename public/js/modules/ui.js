@@ -78,4 +78,23 @@ const UI = {
     }
 };
 
-export default UI; 
+export default UI;
+
+// Efecto de barra superior semi-transparente al hacer scroll
+window.addEventListener('scroll', () => {
+    const topBar = document.querySelector('.top-bar');
+    if (!topBar) return;
+    if (window.scrollY > 10) {
+        topBar.classList.add('scrolled');
+    } else {
+        topBar.classList.remove('scrolled');
+    }
+});
+
+// Exponer función global para filtrado de categorías (integración con categorias.js)
+window.seleccionarCategoria = function(categoriaId) {
+    if (window.nodosModule && typeof window.nodosModule.loadNodos === 'function') {
+        window.nodosModule.currentFilter = categoriaId;
+        window.nodosModule.loadNodos(categoriaId);
+    }
+}; 

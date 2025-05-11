@@ -7,8 +7,7 @@ const firebaseConfig = {
     projectId: window._env_ && window._env_.FIREBASE_PROJECT_ID,
     storageBucket: window._env_ && window._env_.FIREBASE_STORAGE_BUCKET,
     messagingSenderId: window._env_ && window._env_.FIREBASE_MESSAGING_SENDER_ID,
-    appId: window._env_ && window._env_.FIREBASE_APP_ID,
-    databaseURL: window._env_ && window._env_.FIREBASE_DATABASE_URL
+    appId: window._env_ && window._env_.FIREBASE_APP_ID
 };
 
 // Lista de administradores por defecto (puede ampliarse desde un archivo de configuración)
@@ -67,7 +66,6 @@ try {
             auth: firebase.auth(),
             db: firebase.firestore(),
             storage: firebase.storage(),
-            rtdb: firebase.database(),
             initialized: false, // Será true cuando se complete todo el proceso
             persistenceError: false
         };
@@ -147,54 +145,38 @@ async function crearCorreoAutorizadoSiNoExiste(correoAdmin) {
         console.log('[FIREBASE_SERVICE] Verificando si existe correo autorizado:', correoAdmin);
         
         try {
-            // Verificar en RTDB (base de datos realtime)
-            const rtdb = window.firebaseService.rtdb;
-            if (rtdb) {
-                await rtdb.ref('correosAutorizados/' + correoAdminNormalizado).set(true);
-                console.log('[FIREBASE_SERVICE] ✅ Correo autorizado guardado en RTDB con formato normalizado:', correoAdminNormalizado);
-            }
-            
             // Verificar en Firestore
             const docRef = await db.collection('correosAutorizados').doc(correoAdmin).get();
             
             if (!docRef.exists) {
-                console.log('[FIREBASE_SERVICE] Correo autorizado no existe como ID, verificando como campo...');
+                console.log('[FIREBASE_SERVICE] Correo autorizado no existe, creándolo...');
                 
-                // Verificar si existe como field email
-                const snapshot = await db.collection('correosAutorizados').where('email', '==', correoAdmin).get();
-                
-                if (snapshot.empty) {
-                    console.log('[FIREBASE_SERVICE] Correo autorizado no existe, creándolo...');
+                try {
+                    // Crear el documento con el correo como ID
+                    await db.collection('correosAutorizados').doc(correoAdmin).set({
+                        email: correoAdmin,
+                        normalizedEmail: correoAdminNormalizado,
+                        roles: ['admin'],
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                    });
                     
+                    console.log('[FIREBASE_SERVICE] ✅ Correo autorizado creado exitosamente en Firestore');
+                } catch (createError) {
+                    console.error('[FIREBASE_SERVICE] Error al crear el correo autorizado en Firestore:', createError);
+                    console.log('[FIREBASE_SERVICE] Intentando crear de forma alternativa...');
+                    
+                    // Intentar crear de forma alternativa (con add en lugar de set)
                     try {
-                        // Crear el documento con el correo como ID
-                        await db.collection('correosAutorizados').doc(correoAdmin).set({
+                        await db.collection('correosAutorizados').add({
                             email: correoAdmin,
                             normalizedEmail: correoAdminNormalizado,
                             roles: ['admin'],
                             timestamp: firebase.firestore.FieldValue.serverTimestamp()
                         });
-                        
-                        console.log('[FIREBASE_SERVICE] ✅ Correo autorizado creado exitosamente en Firestore');
-                    } catch (createError) {
-                        console.error('[FIREBASE_SERVICE] Error al crear el correo autorizado en Firestore:', createError);
-                        console.log('[FIREBASE_SERVICE] Intentando crear de forma alternativa...');
-                        
-                        // Intentar crear de forma alternativa (con add en lugar de set)
-                        try {
-                            await db.collection('correosAutorizados').add({
-                                email: correoAdmin,
-                                normalizedEmail: correoAdminNormalizado,
-                                roles: ['admin'],
-                                timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                            });
-                            console.log('[FIREBASE_SERVICE] ✅ Correo autorizado creado exitosamente en Firestore (método alternativo)');
-                        } catch (altCreateError) {
-                            console.error('[FIREBASE_SERVICE] Error al crear con método alternativo:', altCreateError);
-                        }
+                        console.log('[FIREBASE_SERVICE] ✅ Correo autorizado creado exitosamente en Firestore (método alternativo)');
+                    } catch (altCreateError) {
+                        console.error('[FIREBASE_SERVICE] Error al crear con método alternativo:', altCreateError);
                     }
-                } else {
-                    console.log('[FIREBASE_SERVICE] ✅ Correo autorizado existe como campo email en Firestore');
                 }
             } else {
                 console.log('[FIREBASE_SERVICE] ✅ Correo autorizado existe como ID del documento en Firestore');

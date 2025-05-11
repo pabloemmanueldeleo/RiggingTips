@@ -1,10 +1,17 @@
 .top-bar {
-    background: #fff;
+    background: rgba(0, 104, 116, 0.98);
+    color: white;
+    padding: 0.7em 0;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    padding: 1rem;
     position: sticky;
     top: 0;
-    z-index: 1000;
+    z-index: 100;
+    transition: background 0.3s, backdrop-filter 0.3s;
+}
+
+.top-bar.scrolled {
+    background: rgba(0, 104, 116, 0.72);
+    backdrop-filter: blur(8px) saturate(1.2);
 }
 
 .top-bar h1 {

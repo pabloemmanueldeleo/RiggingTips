@@ -5,8 +5,7 @@ const firebaseConfig = {
     projectId: window._env_?.FIREBASE_PROJECT_ID,
     storageBucket: window._env_?.FIREBASE_STORAGE_BUCKET,
     messagingSenderId: window._env_?.FIREBASE_MESSAGING_SENDER_ID,
-    appId: window._env_?.FIREBASE_APP_ID,
-    databaseURL: window._env_?.FIREBASE_DATABASE_URL
+    appId: window._env_?.FIREBASE_APP_ID
 };
 
 // Validar que todas las configuraciones estén presentes
@@ -27,7 +26,6 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 const storage = firebase.storage();
-const rtdb = firebase.database();
 
 // Habilitar persistencia offline para Firestore
 db.enablePersistence()
@@ -40,4 +38,4 @@ db.enablePersistence()
     });
 
 // Exportar la configuración y servicios
-export { auth, db, storage, rtdb, firebaseConfig }; 
+export { auth, db, storage, firebaseConfig }; 

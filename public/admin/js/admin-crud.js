@@ -80,6 +80,7 @@ function setupEventListeners() {
     
     // Configurar búsqueda
     const searchInput = document.getElementById('searchInput');
+    const searchClearBtn = document.getElementById('searchClearBtn');
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
             const query = e.target.value.toLowerCase();
@@ -92,6 +93,12 @@ function setupEventListeners() {
                 );
                 renderTips(filtered);
             }
+        });
+    }
+    if (searchClearBtn) {
+        searchClearBtn.addEventListener('click', () => {
+            searchInput.value = '';
+            renderTips(tips);
         });
     }
 }
@@ -142,7 +149,7 @@ function updateCategorySelect() {
     
     categorias.forEach(cat => {
         const option = document.createElement('option');
-        option.value = cat.nombre;
+        option.value = cat.id;
         option.textContent = cat.nombre;
         select.appendChild(option);
     });
@@ -154,15 +161,17 @@ function renderCategoriesBar() {
     if (!bar) return;
     
     let html = `
-        <button class="categoria-btn active" data-categoria="">
+        <button class="categoria-btn active" data-categoria="" style="--categoria-color: #006874;">
             Todas <span class="category-count">${tips.length}</span>
         </button>
     `;
     
     categorias.forEach(cat => {
-        const count = tips.filter(tip => tip.categoria === cat.nombre).length;
+        const count = tips.filter(tip => tip.categoria === cat.id).length;
+        const colorHex = cat.color || '#666';
         html += `
-            <button class="categoria-btn" data-categoria="${cat.nombre}">
+            <button class="categoria-btn" data-categoria="${cat.id}"
+                style="--categoria-color: ${colorHex}; background-color: ${colorHex}20; border-color: ${colorHex};">
                 ${cat.nombre} <span class="category-count">${count}</span>
             </button>
         `;
@@ -237,8 +246,7 @@ function renderTips(tipsToRender) {
     let html = '';
     
     tipsToRender.forEach(tip => {
-        // Obtener color de categoría
-        const categoria = categorias.find(c => c.nombre === tip.categoria);
+        const categoria = categorias.find(c => c.id === tip.categoria);
         const color = categoria && categoria.color ? categoria.color : '#666';
         
         html += `
@@ -254,7 +262,7 @@ function renderTips(tipsToRender) {
                     
                     <div class="tip-categoria" style="background-color: ${color}20; border: 1px solid ${color}; color: ${color};">
                         <span class="categoria-color-indicator" style="background-color: ${color};"></span>
-                        ${tip.categoria || 'Sin categoría'}
+                        ${categoria ? categoria.nombre : (tip.categoria || 'Sin categoría')}
                     </div>
                     
                     <div class="tip-actions">
@@ -309,7 +317,7 @@ function showTipModal(tipId = null) {
                 preview.innerHTML = `
                     <div class="preview-container">
                         <img src="${tip.imagen}" alt="Vista previa">
-                        <button type="button" class="remove-preview" onclick="document.getElementById('imagePreview').innerHTML = ''; document.getElementById('imagen').value = '';">×</button>
+                        <button type="button" class="remove-preview" onclick="document.getElementById('imagePreview').innerHTML = ''; document.getElementById('imagen').value = '';"></button>
                     </div>
                 `;
             }
@@ -547,7 +555,7 @@ window.deleteCategory = async function(categoryId) {
     if (!categoria) return;
     
     // Verificar si hay tips con esta categoría
-    const tipsConCategoria = tips.filter(t => t.categoria === categoria.nombre);
+    const tipsConCategoria = tips.filter(t => t.categoria === categoria.id);
     
     if (tipsConCategoria.length > 0) {
         if (!confirm(`Hay ${tipsConCategoria.length} tips que usan esta categoría. Si la eliminas, esos tips quedarán sin categoría. ¿Deseas continuar?`)) {

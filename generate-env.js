@@ -9,8 +9,7 @@ const requiredEnvVars = [
     'FIREBASE_PROJECT_ID',
     'FIREBASE_STORAGE_BUCKET',
     'FIREBASE_MESSAGING_SENDER_ID',
-    'FIREBASE_APP_ID',
-    'FIREBASE_DATABASE_URL'
+    'FIREBASE_APP_ID'
 ];
 
 const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
@@ -30,8 +29,7 @@ window._env_ = {
     FIREBASE_PROJECT_ID: '${process.env.FIREBASE_PROJECT_ID}',
     FIREBASE_STORAGE_BUCKET: '${process.env.FIREBASE_STORAGE_BUCKET}',
     FIREBASE_MESSAGING_SENDER_ID: '${process.env.FIREBASE_MESSAGING_SENDER_ID}',
-    FIREBASE_APP_ID: '${process.env.FIREBASE_APP_ID}',
-    FIREBASE_DATABASE_URL: '${process.env.FIREBASE_DATABASE_URL}'
+    FIREBASE_APP_ID: '${process.env.FIREBASE_APP_ID}'
 };
 
 // Validación de configuración

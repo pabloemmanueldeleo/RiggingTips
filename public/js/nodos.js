@@ -84,12 +84,9 @@ const nodosModule = {
             });
         }
 
-        // Filtrado por categoría
-        window.addEventListener('filtrarPorCategoria', (e) => {
-            this.currentFilter = e.detail.categoria;
-            this.loadNodos();
-        });
-        
+        // Eliminar listeners directos a botones de categoría
+        // El filtrado ahora se maneja por evento global
+
         // Evento para ordenar
         const sortSelect = document.getElementById('sortOrder');
         if (sortSelect) {
@@ -98,19 +95,28 @@ const nodosModule = {
                 this.loadNodos();
             });
         }
+
+        // Escuchar evento global de filtrado de categorías
+        window.addEventListener('filtrarPorCategoria', (e) => {
+            const categoria = e.detail.categoria || '';
+            this.currentFilter = categoria;
+            this.loadNodos(categoria);
+        });
     },
 
-    async loadNodos() {
+    async loadNodos(categoriaId = '') {
         try {
             // Cargar destacados primero
             await this.loadDestacados();
             // Cargar los más votados
             await this.loadMasVotados();
             // Cargar el resto de nodos para la sección "Todos los Tips"
-            let query = this.db.collection('nodos').where('publico', '==', true); // Asegurar que solo se carguen tips públicos
-            if (this.currentFilter) {
-                // Filtrar por id de categoría, no por nombre
-                query = query.where('categoria', '==', this.currentFilter);
+            let query = this.db.collection('nodos').where('publico', '==', true); // Solo tips públicos
+            const searchTerm = this.searchInput.value.trim().toLowerCase();
+            // Usar el id de la categoría para filtrar
+            const categoriaFiltro = categoriaId || this.currentFilter;
+            if (categoriaFiltro && categoriaFiltro !== 'todos') {
+                query = query.where('categoria', '==', categoriaFiltro);
             }
             // Ordenar por fecha
             if (this.sortOrder === 'nuevo') {
@@ -121,13 +127,13 @@ const nodosModule = {
                 query = query.where('destacado', '==', true).orderBy('fechaCreacion', 'desc');
             }
             const snapshot = await query.get();
-            const nodos = snapshot.docs.map(doc => {
+            let nodos = snapshot.docs.map(doc => {
                 const data = doc.data();
                 return {
                     id: doc.id,
                     titulo: data.titulo || data.nombre || 'Sin título',
                     descripcion: data.descripcion || 'Sin descripción',
-                    categoria: data.categoria || 'Sin categoría',
+                    categoria: data.categoria || 'Sin categoría', // Aquí debe ser el id
                     imagen: data.imagen || (data.media && data.media.principal) || '',
                     video: data.video || (data.media && data.media.video) || '',
                     contenido: data.contenido || '',
@@ -140,6 +146,13 @@ const nodosModule = {
                     vistas: data.vistas || 0
                 };
             });
+            // Filtrar por búsqueda si hay término
+            if (searchTerm) {
+                nodos = nodos.filter(nodo =>
+                    nodo.titulo.toLowerCase().includes(searchTerm) ||
+                    nodo.descripcion.toLowerCase().includes(searchTerm)
+                );
+            }
             this.allNodos = nodos;
             this.renderNodos(nodos, this.nodosGrid);
         } catch (error) {
@@ -260,67 +273,10 @@ const nodosModule = {
     },
 
     handleSearch() {
-        const searchTerm = this.searchInput.value.toLowerCase();
-        this.loadNodosWithSearch(searchTerm);
+        // Al buscar, recargar nodos con el filtro actual
+        this.loadNodos(this.currentFilter);
     },
 
-    async loadNodosWithSearch(searchTerm) {
-        try {
-            let query = this.db.collection('nodos');
-            
-            if (this.sortOrder === 'nuevo') {
-                query = query.orderBy('fechaCreacion', 'desc');
-            } else if (this.sortOrder === 'antiguo') {
-                query = query.orderBy('fechaCreacion', 'asc');
-            } else if (this.sortOrder === 'destacados') {
-                query = query.where('destacado', '==', true).orderBy('fechaCreacion', 'desc');
-            }
-            
-            const snapshot = await query.get();
-            const nodos = snapshot.docs.map(doc => {
-                const data = doc.data();
-                return {
-                    id: doc.id,
-                    titulo: data.titulo || data.nombre || 'Sin título',
-                    descripcion: data.descripcion || 'Sin descripción',
-                    categoria: data.categoria || 'Sin categoría',
-                    imagen: data.imagen || (data.media && data.media.principal) || '',
-                    video: data.video || (data.media && data.media.video) || '',
-                    contenido: data.contenido || '',
-                    url: data.url || '',
-                    fechaCreacion: data.fechaCreacion ? data.fechaCreacion.toDate() : new Date(),
-                    destacado: data.destacado || false,
-                    publico: data.publico !== false,
-                    likes: data.likes || 0,
-                    dislikes: data.dislikes || 0,
-                    vistas: data.vistas || 0
-                };
-            }).filter(nodo => 
-                nodo.titulo.toLowerCase().includes(searchTerm) ||
-                nodo.descripcion.toLowerCase().includes(searchTerm)
-            );
-
-            if (this.currentFilter) {
-                const filteredNodos = nodos.filter(nodo => 
-                    nodo.categoria === this.currentFilter
-                );
-                this.renderNodos(filteredNodos, this.nodosGrid);
-            } else {
-                this.renderNodos(nodos, this.nodosGrid);
-            }
-            
-            // Ocultar secciones especiales durante la búsqueda
-            if (this.destacadosSection) {
-                this.destacadosSection.style.display = 'none';
-            }
-            if (this.masVotadosSection) {
-                this.masVotadosSection.style.display = 'none';
-            }
-        } catch (error) {
-            console.error('Error en la búsqueda:', error);
-        }
-    },
-    
     getCategoryColor(categoria) {
         const cat = this.categorias.find(c => c.nombre === categoria);
         return cat ? cat.color : '#666';
@@ -564,4 +520,7 @@ const nodosModule = {
 // Inicializar cuando el DOM esté listo
 document.addEventListener('DOMContentLoaded', () => {
     nodosModule.init();
-}); 
+});
+
+// Exponer el módulo globalmente para integración con filtrado de categorías
+window.nodosModule = nodosModule; 

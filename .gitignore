@@ -81,3 +81,4 @@ temp/
 # Cache
 .cache/
 .firebaserc
+importar_desde_rtdb.js

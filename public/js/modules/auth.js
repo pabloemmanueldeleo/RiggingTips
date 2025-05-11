@@ -104,18 +104,6 @@ const authModule = {
         try {
             console.log("Verificando autorización para:", email);
             
-            // Primero intentamos con RTDB (más rápido y confiable)
-            const rtdb = firebase.database();
-            const emailKey = email.replace(/\./g, '_');
-            console.log("Clave en RTDB:", emailKey);
-            
-            const snapshot = await rtdb.ref('correosAutorizados').child(emailKey).get();
-            console.log("Resultado de RTDB:", snapshot.exists() ? "Existe" : "No existe", snapshot.val());
-            
-            if (snapshot.exists() && snapshot.val() === true) {
-                return true;
-            }
-
             // Si no está en RTDB, intentamos con Firestore
             const userDoc = await this.db.collection('correosAutorizados').doc(email).get();
             console.log("Resultado de Firestore:", userDoc.exists ? "Existe" : "No existe");
